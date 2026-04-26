@@ -18,7 +18,7 @@ chapter: false
 
 &emsp; **Major:** Information Technology
 
-&emsp; **Class:** AWS082025
+&emsp; **Class:** 22DTHD1
 
 &emsp; **Host Company:** Amazon Web Services Vietnam Co., Ltd.
 
