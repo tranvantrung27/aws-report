@@ -261,11 +261,74 @@ python identitystore_operations.py create_user --identitystoreid d-123456a7890 -
 
 #### Lab 3: AWS Backup (Lab 13)
 ##### 1. Giới thiệu (Introduction)
+AWS Backup là một dịch vụ quản lý và tự động hóa quá trình sao lưu dữ liệu tập trung hoàn toàn trên AWS. Dịch vụ này hỗ trợ bảo vệ dữ liệu cho nhiều tài nguyên cốt lõi như EBS volumes, RDS databases, DynamoDB tables, EFS file systems, và S3 buckets. Qua bài lab này, chúng ta sẽ cấu hình Backup Plan tự động hóa sao lưu và kiểm thử khôi phục tài nguyên qua Lambda Function.
+
 ##### 2. Chuẩn bị (Preparation)
 ###### 2.1 Tạo S3 Bucket
+* Khởi tạo S3 Bucket `aws-backup-lab-artifacts-tranvantrung` để chứa các tệp tin deploy:
+```bash
+aws s3 mb s3://aws-backup-lab-artifacts-tranvantrung --region ap-southeast-1
+```
+* Tải tệp zip chứa source code của Lambda Function (`lambda_function.zip`) lên bucket:
+```bash
+aws s3 cp lambda_function.zip s3://aws-backup-lab-artifacts-tranvantrung/lambda_function.zip
+```
+* Gán Public Policy cho Bucket để CloudFormation có thể đọc dữ liệu deploy:
+
+![S3 Artifacts Bucket](/images/worklog/week-7/3_s3_artifacts.png)
+
 ###### 2.2 Triển khai hạ tầng (Deploy infrastructure)
+* Sử dụng AWS CloudFormation để triển khai file template `backup-lab.yaml`.
+* **Tham số quan trọng:** Thay đổi cấu hình mặc định của EC2 Instance từ `t2.micro` sang `t3.micro` để phù hợp với chính sách bảo mật Free Tier của tài khoản và tránh lỗi khởi tạo.
+* Chạy lệnh deploy qua CLI:
+```bash
+aws cloudformation create-stack --stack-name "Backup-plan" --template-body "file://backup-lab.yaml" --parameters ParameterKey=AvailabilityZone,ParameterValue="ap-southeast-1a" ParameterKey=NotificationEmail,ParameterValue="tranvantrung27@gmail.com" ParameterKey=S3BucketName,ParameterValue="aws-backup-lab-artifacts-tranvantrung" ParameterKey=S3KeyLambdaZip,ParameterValue="lambda_function.zip" --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM
+```
+* Xác minh Stack chuyển sang trạng thái `CREATE_COMPLETE` / `UPDATE_COMPLETE` với mô tả rút ngắn gọn:
+
+![CloudFormation Stack Complete](/images/worklog/week-7/3_cloudformation_complete.png)
+
 ##### 3. Tạo Backup plan (Create Backup plan)
+* Khởi tạo Backup Vault có tên `BACKUP-LAB-VAULT` để làm kho lưu trữ các bản sao lưu:
+```bash
+aws backup create-backup-vault --backup-vault-name "BACKUP-LAB-VAULT"
+```
+* Tạo Backup Plan có tên `BACKUP-LAB` với chu kỳ sao lưu hàng ngày (Daily) thông qua tệp cấu hình JSON:
+```bash
+aws backup create-backup-plan --backup-plan "file://backup-plan.json"
+```
+* Tiến hành gán tài nguyên cần sao lưu tự động dựa theo tag `workload=myapp` (đã được cấu hình tự động trên máy chủ EC2 tạo từ CloudFormation):
+```bash
+aws backup create-backup-selection --backup-plan-id "<Backup-Plan-ID>" --backup-selection "file://resource-assignment.json"
+```
+
 ##### 4. Thiết lập thông báo (Set up notifications)
+* Thực hiện liên kết Backup Vault `BACKUP-LAB-VAULT` với SNS Topic được tạo ra từ stack CloudFormation (`BackupNotificationTopic-Backup-plan`) để tự động gửi thông báo email khi có sự kiện sao lưu/khôi phục hoàn tất:
+```bash
+aws backup put-backup-vault-notifications --region ap-southeast-1 --backup-vault-name "BACKUP-LAB-VAULT" --backup-vault-events BACKUP_JOB_COMPLETED RESTORE_JOB_COMPLETED --sns-topic-arn "arn:aws:sns:ap-southeast-1:938834038589:BackupNotificationTopic-Backup-plan"
+```
+* Xác minh trạng thái SNS Topic trên Console hiển thị hoạt động:
+
+![SNS Notification Topic](/images/worklog/week-7/3_sns_topic.png)
+
 ##### 5. Kiểm tra khôi phục (Test Restore)
+* Thực hiện chạy thử một tác vụ sao lưu theo yêu cầu (On-demand backup) từ EC2 instance để kích hoạt Lambda Function chạy test restore tự động:
+```bash
+aws backup start-backup-job --backup-vault-name "BACKUP-LAB-VAULT" --resource-arn "arn:aws:ec2:ap-southeast-1:938834038589:instance/i-0b0e170ebbc2e6f06" --iam-role-arn "arn:aws:iam::938834038589:role/aws-service-role/backup.amazonaws.com/AWSServiceRoleForBackup"
+```
+* **Xử lý sự cố (Troubleshooting):** Khi chạy tác vụ, Job báo trạng thái `Failed` với lỗi `Access denied`. 
+  * *Nguyên nhân:* Do tài khoản IAM User hiện tại chưa được cấp quyền `iam:PassRole` cho vai trò dịch vụ `AWSServiceRoleForBackup`, dẫn đến việc AWS Backup bị chặn khi thực hiện tương tác sao lưu EBS Volume cục bộ. Đây là một điểm cần chú ý về phân quyền bảo mật Least Privilege khi triển khai thực tế.
+
+![Backup Job Access Denied](/images/worklog/week-7/3_backup_job.png)
+
 ##### 6. Dọn dẹp tài nguyên (Clean up resources)
+Tiến hành dọn dẹp sạch toàn bộ tài nguyên để tránh phát sinh chi phí:
+```bash
+aws backup delete-backup-selection --backup-plan-id "<Backup-Plan-ID>" --selection-id "<Selection-ID>"
+aws backup delete-backup-plan --backup-plan-id "<Backup-Plan-ID>"
+aws backup delete-backup-vault --backup-vault-name "BACKUP-LAB-VAULT"
+aws cloudformation delete-stack --stack-name Backup-plan
+aws s3 rb s3://aws-backup-lab-artifacts-tranvantrung/ --force
+```
+
 

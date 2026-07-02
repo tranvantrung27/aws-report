@@ -259,10 +259,73 @@ python identitystore_operations.py create_user --identitystoreid d-123456a7890 -
 
 #### Lab 3: AWS Backup (Lab 13)
 ##### 1. Introduction
+AWS Backup is a fully managed service that makes it easy to centralize and automate data protection across AWS services. It supports backing up resources like EBS volumes, RDS databases, DynamoDB tables, EFS file systems, and S3 buckets. In this lab, we configured a Backup Plan for automated backups and tested resource restoration via a Lambda Function.
+
 ##### 2. Preparation
 ###### 2.1 Create S3 Bucket
+* Created S3 Bucket `aws-backup-lab-artifacts-tranvantrung` to hold deployment artifacts:
+```bash
+aws s3 mb s3://aws-backup-lab-artifacts-tranvantrung --region ap-southeast-1
+```
+* Uploaded Lambda Function zip source code (`lambda_function.zip`):
+```bash
+aws s3 cp lambda_function.zip s3://aws-backup-lab-artifacts-tranvantrung/lambda_function.zip
+```
+* Assigned a Public Read bucket policy to allow CloudFormation template deployment:
+
+![S3 Artifacts Bucket](/images/worklog/week-7/3_s3_artifacts.png)
+
 ###### 2.2 Deploy infrastructure
+* Deployed the `backup-lab.yaml` CloudFormation template.
+* **Important parameter adjustment:** Changed the default EC2 instance type from `t2.micro` to `t3.micro` to comply with the account's Free Tier restrictions.
+* Run deployment command via CLI:
+```bash
+aws cloudformation create-stack --stack-name "Backup-plan" --template-body "file://backup-lab.yaml" --parameters ParameterKey=AvailabilityZone,ParameterValue="ap-southeast-1a" ParameterKey=NotificationEmail,ParameterValue="tranvantrung27@gmail.com" ParameterKey=S3BucketName,ParameterValue="aws-backup-lab-artifacts-tranvantrung" ParameterKey=S3KeyLambdaZip,ParameterValue="lambda_function.zip" --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM
+```
+* Verified stack completed deployment (`CREATE_COMPLETE` / `UPDATE_COMPLETE`) with a shortened stack description:
+
+![CloudFormation Stack Complete](/images/worklog/week-7/3_cloudformation_complete.png)
+
 ##### 3. Create Backup plan
+* Created a Backup Vault named `BACKUP-LAB-VAULT` to store recovery points:
+```bash
+aws backup create-backup-vault --backup-vault-name "BACKUP-LAB-VAULT"
+```
+* Created the `BACKUP-LAB` Backup Plan with a daily schedule through a local JSON config:
+```bash
+aws backup create-backup-plan --backup-plan "file://backup-plan.json"
+```
+* Assigned target resources to the plan using the tag `workload=myapp` (configured on the EC2 instance):
+```bash
+aws backup create-backup-selection --backup-plan-id "<Backup-Plan-ID>" --backup-selection "file://resource-assignment.json"
+```
+
 ##### 4. Set up notifications
+* Linked `BACKUP-LAB-VAULT` notifications to the CloudFormation-created SNS Topic (`BackupNotificationTopic-Backup-plan`):
+```bash
+aws backup put-backup-vault-notifications --region ap-southeast-1 --backup-vault-name "BACKUP-LAB-VAULT" --backup-vault-events BACKUP_JOB_COMPLETED RESTORE_JOB_COMPLETED --sns-topic-arn "arn:aws:sns:ap-southeast-1:938834038589:BackupNotificationTopic-Backup-plan"
+```
+* Verified the SNS Topic in the console:
+
+![SNS Notification Topic](/images/worklog/week-7/3_sns_topic.png)
+
 ##### 5. Test Restore
+* Started an on-demand backup job from the target EC2 instance to trigger the Lambda restore validation workflow:
+```bash
+aws backup start-backup-job --backup-vault-name "BACKUP-LAB-VAULT" --resource-arn "arn:aws:ec2:ap-southeast-1:938834038589:instance/i-0b0e170ebbc2e6f06" --iam-role-arn "arn:aws:iam::938834038589:role/aws-service-role/backup.amazonaws.com/AWSServiceRoleForBackup"
+```
+* **Troubleshooting:** The backup job returned a `Failed` status with an `Access denied` error.
+  * *Reason:* The IAM User lacked `iam:PassRole` permissions for the `AWSServiceRoleForBackup` role. This prevents AWS Backup from assuming the role to perform EBS Volume backup operations, showcasing security boundary rules on actual AWS setups.
+
+![Backup Job Access Denied](/images/worklog/week-7/3_backup_job.png)
+
 ##### 6. Clean up resources
+Cleaned up all resources to avoid any AWS charges:
+```bash
+aws backup delete-backup-selection --backup-plan-id "<Backup-Plan-ID>" --selection-id "<Selection-ID>"
+aws backup delete-backup-plan --backup-plan-id "<Backup-Plan-ID>"
+aws backup delete-backup-vault --backup-vault-name "BACKUP-LAB-VAULT"
+aws cloudformation delete-stack --stack-name Backup-plan
+aws s3 rb s3://aws-backup-lab-artifacts-tranvantrung/ --force
+```
+
