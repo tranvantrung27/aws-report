@@ -88,21 +88,13 @@ VPC Peering establishes a direct route for private IP traffic between two VPCs.
 
 ##### 4. Configure Route Tables
 After accepting the peering connection, we must update the route tables so VPCs know how to route cross-VPC traffic.
+* **VPC 1 Route Table:**
+  * Add Route: Destination `10.10.0.0/16` -> Target: `Peering Connection` (`pcx-09f244ad36ffcd7ba`).
+* **VPC 2 Route Table:**
+  * Add Route: Destination `172.31.0.0/16` -> Target: `Peering Connection` (`pcx-09f244ad36ffcd7ba`).
+* Verified route configuration on VPC 2 route table console page:
 
-* **VPC-A Route Table (Public Route Table A):**
-  * Add Route: Destination `10.2.0.0/16` -> Target: `Peering Connection` (`pcx-xxxxxx`).
-* **VPC-B Route Table (Public Route Table B):**
-  * Add Route: Destination `10.1.0.0/16` -> Target: `Peering Connection` (`pcx-xxxxxx`).
-
-{{% notice info "Connection Verification" %}}
-SSH into **EC2-VPC-A** and ping the **Private IP** of **EC2-VPC-B**:
-```bash
-ping 10.2.1.X
-```
-If the ping is successful, the VPC Peering connection is active.
-{{% /notice %}}
-
----
+![VPC Route Table Peering](/images/worklog/week-10/4_route_tables_configured.png)
 
 ##### 5. Configure Network ACL (NACL) - Stateless Testing
 
@@ -110,7 +102,7 @@ If the ping is successful, the VPC Peering connection is active.
 Unlike Security Groups which are **Stateful** (allowing inbound traffic implicitly allows outbound responses), Network ACLs are **Stateless**. You must explicitly define rules for both inbound and outbound traffic.
 {{% /notice %}}
 
-1. Create a custom NACL and associate it with VPC-A's Public Subnet.
+1. Create a custom NACL and associate it with VPC 2's Public Subnet.
 2. Define the Inbound and Outbound rules to allow communication:
    * **Inbound Rules:**
      * Rule 100: Allow SSH (Port 22) from the internet (to connect to EC2).
@@ -119,7 +111,11 @@ Unlike Security Groups which are **Stateful** (allowing inbound traffic implicit
    * **Outbound Rules:**
      * Rule 100: Allow ICMP (Ping) to `172.31.0.0/16`.
      * Rule 110: Allow Ephemeral Ports (`1024-65535`) to the internet.
-3. **Test Ping Block:** Change the Inbound Rule 110 for ICMP from `Allow` to `Deny`. Ping from host inside VPC 1 to host inside VPC 2 to confirm that traffic is blocked.
+3. Verified Inbound Rules restricting traffic to VPC 1 CIDR (`172.31.0.0/16`) on the custom Network ACL console page:
+
+![Network ACL Inbound Rules](/images/worklog/week-10/3_nacl_inbound_rules.png)
+
+4. **Test Ping Block:** Change the Inbound Rule 110 for ICMP from `Allow` to `Deny`. Ping from host inside VPC 1 to host inside VPC 2 to confirm that traffic is blocked.
 
 ##### 6. Enable Cross-Peer DNS Support
 By default, EC2 instances cannot resolve the private DNS names of instances in peered VPCs. We must enable this setting:

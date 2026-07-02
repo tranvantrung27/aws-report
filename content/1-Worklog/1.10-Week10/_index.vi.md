@@ -92,6 +92,9 @@ Sau khi tạo kết nối Peering, ta cần thêm cấu hình định tuyến đ
   * Thêm dòng Route: Destination `10.10.0.0/16` -> Target: `Peering Connection` (`pcx-09f244ad36ffcd7ba`).
 * **Tại Route Table của VPC 2:**
   * Thêm dòng Route: Destination `172.31.0.0/16` -> Target: `Peering Connection` (`pcx-09f244ad36ffcd7ba`).
+* Minh chứng thêm route thành công trỏ sang VPC 1 qua liên kết Peering trên bảng định tuyến của VPC 2:
+
+![VPC Route Table Peering](/images/worklog/week-10/4_route_tables_configured.png)
 
 ##### 5. Cấu hình Network ACL (NACL) - Kiểm thử cơ chế Stateless
 Khác với Security Group là **Stateful** (chỉ cần cấu hình chiều Inbound là chiều Outbound tự mở), Network ACL hoạt động theo cơ chế **Stateless**. Điều này đồng nghĩa với việc bạn phải cấu hình tường minh cả chiều đi (**Outbound Rules**) lẫn chiều về (**Inbound Rules**).
@@ -104,7 +107,11 @@ Khác với Security Group là **Stateful** (chỉ cần cấu hình chiều Inb
    * **Outbound Rules:**
      * Rule 100: Allow ICMP (Ping) đi tới dải IP `172.31.0.0/16`.
      * Rule 110: Allow Ephemeral Ports (Port `1024-65535`) đi ra internet.
-3. **Thử nghiệm chặn ping:** Đổi Rule 110 của Inbound từ `Allow` sang `Deny`. Thực hiện ping lại từ máy ảo VPC 1 sang máy ảo VPC 2 để kiểm chứng việc chặn traffic thành công.
+3. Minh chứng cấu hình Inbound Rules giới hạn nguồn truy cập từ VPC 1 (`172.31.0.0/16`) trên Network ACL thành công:
+
+![Network ACL Inbound Rules](/images/worklog/week-10/3_nacl_inbound_rules.png)
+
+4. **Thử nghiệm chặn ping:** Đổi Rule 110 của Inbound từ `Allow` sang `Deny`. Thực hiện ping lại từ máy ảo VPC 1 sang máy ảo VPC 2 để kiểm chứng việc chặn traffic thành công.
 
 ##### 6. Cấu hình Cross-Peer DNS Support
 Theo mặc định, các EC2 Instance nằm chéo VPC Peering sẽ không thể phân giải DNS private của nhau sang IP Private. Ta cần bật tính năng này:
