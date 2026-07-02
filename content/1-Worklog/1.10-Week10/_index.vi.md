@@ -207,203 +207,116 @@ aws cloudformation delete-stack --stack-name "Lab20-Stack"
 
 #### Lab 3: Tự động hóa EC2 với AWS Lambda và Thông báo về Slack (Lab 22)
 
+#### Tự động hóa EC2 bằng AWS Lambda và Slack
+
 ##### 1. Giới thiệu (Introduction)
 Tối ưu hóa chi phí (Cost Optimization) là một trụ cột cốt lõi trong AWS Well-Architected Framework. Trong thực tế, các máy chủ môi trường Development/Testing thường không cần chạy 24/7. Bài thực hành này giúp xây dựng quy trình tự động hóa Serverless: sử dụng **AWS Lambda** quét các EC2 Instance có Tag cụ thể để tự động dừng chúng vào lúc 20h00 tối (sau giờ làm việc) và tự động bật lại lúc 08h00 sáng hôm sau, đồng thời gửi thông báo trạng thái trực tiếp về kênh **Slack**.
 
-![Sơ đồ giải pháp Lambda Tự động hóa EC2](/images/worklog/week-10/lambda-ec2-diagram.png)
-
 ##### 2. Các bước chuẩn bị (Preparation)
 
-###### 2.1 Chuẩn bị hạ tầng EC2
+###### 2.1 Chuẩn bị hạ tầng EC2 & Tags
 * Khởi chạy một EC2 Instance chạy hệ điều hành Amazon Linux 2023.
-* Gán thẻ tag cho máy chủ:
-  * **Key:** `Auto-Stop-Start`
+* Gán thẻ tag phân loại cho máy chủ:
+  * **Key:** `environment_auto`
   * **Value:** `true`
+* Minh chứng cấu hình thẻ tag `environment_auto` cho EC2 instance thành công trên Console:
+
+![EC2 Instance Tags](/images/worklog/week-10/2_ec2_instance_tags.png)
 
 ###### 2.2 Tạo Slack Incoming Webhook
 Để tích hợp gửi tin nhắn từ AWS Lambda về Slack:
-1. Truy cập [Slack API Console](https://api.slack.com/apps), bấm chọn **Create New App** -> Chọn **From scratch**.
-2. Đặt tên App là `AWS-Ops-Bot` và chọn Workspace của bạn.
-3. Trong menu tính năng, chọn **Incoming Webhooks**, bật tính năng sang **On**.
-4. Chọn **Add New Webhook to Workspace**, chọn channel nhận tin nhắn (ví dụ: `#aws-alerts`) và nhấn **Allow**.
-5. Copy URL Webhook có cấu trúc dạng: `https://hooks.slack.com/services/TXXXXX/BXXXXX/XXXXXXXXXX`.
-
----
+1. Đăng nhập vào Slack và cấu hình tính năng Incoming WebHook.
+2. Tạo channel `#notification` nhận tin nhắn.
+3. Cài đặt Webhook và sao chép đường dẫn Webhook URL có cấu trúc dạng: `https://hooks.slack.com/services/TXXXXX/BXXXXX/XXXXXXXXXX`.
 
 ##### 3. Tạo IAM Role cho Lambda Function
 Lambda cần được cấp quyền hạn từ IAM Role để có thể thao tác dừng/bật các EC2 instance và tạo Log trên CloudWatch.
+1. Tạo một IAM Role tên `dc-common-lambda-role` với Trusted Entity là `lambda.amazonaws.com`.
+2. Đính kèm các Policy có sẵn:
+   * `AmazonEC2FullAccess`
+   * `CloudWatchFullAccess`
+3. Minh chứng IAM Role của Lambda được đính kèm đầy đủ chính sách quyền thành công trên Console:
 
-1. Truy cập **IAM Console** -> **Roles** -> **Create role**.
-2. Chọn **Common use cases** là **Lambda** -> Nhấn **Next**.
-3. Chọn **Create policy** dạng JSON và dán nội dung sau:
-```json
-{
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Effect": "Allow",
-            "Action": [
-                "ec2:DescribeInstances",
-                "ec2:StartInstances",
-                "ec2:StopInstances"
-            ],
-            "Resource": "*"
-        },
-        {
-            "Effect": "Allow",
-            "Action": [
-                "logs:CreateLogGroup",
-                "logs:CreateLogStream",
-                "logs:PutLogEvents"
-            ],
-            "Resource": "arn:aws:logs:*:*:*"
-        }
-    ]
-}
-```
-4. Đặt tên Policy là `Lambda-EC2-Slack-Policy` và đính kèm vào IAM Role. Đặt tên IAM Role là `Lambda-EC2-Slack-Role`.
-
----
+![IAM Role Lambda](/images/worklog/week-10/1_iam_role_lambda.png)
 
 ##### 4. Triển khai AWS Lambda Functions
-Chúng ta sẽ viết mã nguồn Python sử dụng thư viện SDK `boto3` để tương tác trực tiếp với API của AWS.
+Viết mã nguồn Python sử dụng thư viện SDK `boto3` để tương tác trực tiếp với API của AWS.
 
-###### 4.1 Tạo Function Tự động Dừng Máy chủ (`EC2-Auto-Stop`)
-1. Truy cập **AWS Lambda Console** -> **Create function**.
-2. Tùy chọn cấu hình:
-   * **Function name:** `EC2-Auto-Stop`
-   * **Runtime:** `Python 3.12`
-   * **Execution role:** Chọn *Use an existing role*, chọn `Lambda-EC2-Slack-Role`.
-3. Nhập mã nguồn Python dưới đây vào mục Code:
+###### 4.1 Tạo Function Tự động Dừng Máy chủ (`dc-common-lambda-auto-stop`)
+1. Tạo Lambda Function `dc-common-lambda-auto-stop` chạy môi trường Python 3.11, gán execution role là `dc-common-lambda-role`.
+2. Đăng ký biến môi trường (Environment Variable): `environment_auto = true`.
+3. Minh chứng cấu hình biến môi trường Environment Variables thành công trên Lambda Console:
 
+![Lambda Environment Variable](/images/worklog/week-10/3_lambda_environment_variable.png)
+
+4. Dán đoạn mã Python sau vào mục Source Code:
 ```python
-import json
-import urllib.request
 import boto3
+import os
+import json
+import urllib3
 
-ec2 = boto3.client('ec2', region_name='ap-southeast-1')
-SLACK_WEBHOOK_URL = "https://hooks.slack.com/services/TXXXXX/BXXXXX/XXXXXXXXXX" # Thay bằng URL của bạn
+ec2_resource = boto3.resource('ec2')
+http = urllib3.PoolManager()
+webhook_url = "https://hooks.slack.com/services/TXXXXX/BXXXXX/XXXXXXXXXX" # Thay bằng URL của bạn
 
 def lambda_handler(event, context):
-    # Lọc các EC2 instance đang chạy và có tag Auto-Stop-Start = true
-    filters = [
-        {'Name': 'tag:Auto-Stop-Start', 'Values': ['true']},
-        {'Name': 'instance-state-name', 'Values': ['running']}
-    ]
-    
-    response = ec2.describe_instances(Filters=filters)
-    instance_ids = []
-    
-    for reservation in response['Reservations']:
-        for instance in reservation['Instances']:
-            instance_ids.append(instance['InstanceId'])
-            
-    if len(instance_ids) > 0:
-        ec2.stop_instances(InstanceIds=instance_ids)
-        message = f"🛑 *AWS Lambda Alert:* Đã tự động dừng thành công các EC2 Instances: {', '.join(instance_ids)}"
+    environment_auto = os.environ.get('environment_auto')
+    if not environment_auto:
+        print('Target is empty')
+        return {"statusCode": 400, "body": "Target Tag is empty"}
     else:
-        message = "ℹ️ *AWS Lambda Info:* Không tìm thấy EC2 Instance nào đang chạy có tag `Auto-Stop-Start: true` để dừng."
-        
-    # Gửi thông báo đến Slack
-    slack_message = {"text": message}
-    req = urllib.request.Request(
-        SLACK_WEBHOOK_URL,
-        data=json.dumps(slack_message).encode('utf-8'),
-        headers={'Content-Type': 'application/json'}
-    )
-    urllib.request.urlopen(req)
-    
-    return {
-        'statusCode': 200,
-        'body': json.dumps(message)
-    }
-```
+        instances = ec2_resource.instances.filter(
+            Filters=[{'Name': 'tag:environment_auto', 'Values': [environment_auto]}]
+        )     
+        if not list(instances):
+            response = {
+                "statusCode": 500,
+                "body": "Target Instance is None"
+            }
+        else:
+            action_stop = instances.stop()
+            sent_slack(action_stop)
+            response = {
+                "statusCode": 200,
+                "body": "EC2 Stopping"
+            }
+        return response
 
-4. Nhấn **Deploy** để lưu mã nguồn.
-
-###### 4.2 Tạo Function Tự động Bật Máy chủ (`EC2-Auto-Start`)
-1. Tạo function mới tên là `EC2-Auto-Start` với cấu hình tương tự.
-2. Dán đoạn mã Python sau:
-
-```python
-import json
-import urllib.request
-import boto3
-
-ec2 = boto3.client('ec2', region_name='ap-southeast-1')
-SLACK_WEBHOOK_URL = "https://hooks.slack.com/services/TXXXXX/BXXXXX/XXXXXXXXXX" # Thay bằng URL của bạn
-
-def lambda_handler(event, context):
-    # Lọc các EC2 instance đang dừng và có tag Auto-Stop-Start = true
-    filters = [
-        {'Name': 'tag:Auto-Stop-Start', 'Values': ['true']},
-        {'Name': 'instance-state-name', 'Values': ['stopped']}
-    ]
-    
-    response = ec2.describe_instances(Filters=filters)
-    instance_ids = []
-    
-    for reservation in response['Reservations']:
-        for instance in reservation['Instances']:
-            instance_ids.append(instance['InstanceId'])
-            
-    if len(instance_ids) > 0:
-        ec2.start_instances(InstanceIds=instance_ids)
-        message = f"🚀 *AWS Lambda Alert:* Đã tự động khởi động thành công các EC2 Instances: {', '.join(instance_ids)}"
+def sent_slack(action_stop):
+    list_instance_id = []
+    if (len(action_stop) > 0) and ("StoppingInstances" in action_stop[0]) and (len(action_stop[0]["StoppingInstances"]) > 0):
+        for i in action_stop[0]["StoppingInstances"]:
+            list_instance_id.append(i["InstanceId"])
+        msg = "Stopping Instances ID:\n %s" % (list_instance_id)
+        data = {"text": msg}
+        r = http.request("POST",
+            webhook_url,
+            body = json.dumps(data),
+            headers = {"Content-Type": "application/json"})
     else:
-        message = "ℹ️ *AWS Lambda Info:* Không tìm thấy EC2 Instance nào đang dừng có tag `Auto-Stop-Start: true` để khởi động."
-        
-    # Gửi thông báo đến Slack
-    slack_message = {"text": message}
-    req = urllib.request.Request(
-        SLACK_WEBHOOK_URL,
-        data=json.dumps(slack_message).encode('utf-8'),
-        headers={'Content-Type': 'application/json'}
-    )
-    urllib.request.urlopen(req)
-    
-    return {
-        'statusCode': 200,
-        'body': json.dumps(message)
-    }
+        print('Not found Instances Stop')
 ```
-
-3. Nhấn **Deploy** để lưu mã nguồn.
-
----
 
 ##### 5. Cấu hình Trigger tự động bằng Amazon EventBridge Scheduler
-Chúng ta sẽ thiết lập lịch trình tự động gọi 2 Lambda Function theo lịch Cron mong muốn.
-
-1. Truy cập giao diện **Amazon EventBridge** -> **Schedulers** -> **Create schedule**.
-2. **Cấu hình Schedule dừng máy chủ (Auto-Stop):**
-   * **Schedule name:** `Daily-EC2-Stop`
-   * **Occurrence:** `Recurring schedule` (Lịch định kỳ)
-   * **Schedule type:** `Cron-based schedule`
-   * **Expression:** `0 20 ? * MON-FRI *` (Có nghĩa là chạy vào lúc 20:00 tối từ thứ Hai đến thứ Sáu hàng tuần).
-   * **Target:** Chọn `AWS Lambda` -> Chọn function `EC2-Auto-Stop`.
-   * Nhấp chọn **Create schedule**.
-3. **Cấu hình Schedule bật máy chủ (Auto-Start):**
-   * **Schedule name:** `Daily-EC2-Start`
-   * **Occurrence:** `Recurring schedule`
-   * **Schedule type:** `Cron-based schedule`
-   * **Expression:** `0 8 ? * MON-FRI *` (Chạy vào lúc 08:00 sáng từ thứ Hai đến thứ Sáu hàng tuần).
-   * **Target:** Chọn `AWS Lambda` -> Chọn function `EC2-Auto-Start`.
-   * Nhấp chọn **Create schedule**.
-
----
+Chúng ta thiết lập lịch trình tự động gọi 2 Lambda Function theo lịch Cron mong muốn để Bật/Tắt EC2 theo giờ:
+* Rule Stop (`dc-common-lambda-auto-stop`): Lập lịch tự động tắt máy chủ vào 20:00 tối các ngày trong tuần.
+* Rule Start (`dc-common-lambda-auto-start`): Lập lịch tự động bật máy chủ vào 08:00 sáng.
 
 ##### 6. Kiểm tra Kết quả (Check Result)
-1. Thử nghiệm thủ công: Vào Lambda Function `EC2-Auto-Stop`, bấm nút **Test** để chạy thử.
-2. Kiểm tra giao diện quản lý EC2 Console xem trạng thái của EC2 Instance đã đổi từ `running` sang `stopping`/`stopped` hay chưa.
-3. Mở ứng dụng **Slack**, kiểm tra kênh chat đã cấu hình để xác nhận Ops Bot gửi tin nhắn cảnh báo thành công.
+1. Thử nghiệm thủ công: Vào Lambda Function `dc-common-lambda-auto-stop`, tạo test event và chạy thử nghiệm (Test).
+2. Minh chứng Lambda thực thi thành công trả về `statusCode: 200`:
 
-![Ops Bot Slack Notification](/images/worklog/week-10/slack-notification.png)
+![Lambda Execution Success](/images/worklog/week-10/4_lambda_execution_success.png)
 
----
+3. Minh chứng trạng thái EC2 Instance chuyển sang `stopped` thành công sau khi Lambda hoạt động:
+
+![EC2 Stopped Status](/images/worklog/week-10/5_ec2_stopped_status.png)
 
 ##### 7. Dọn dẹp tài nguyên (Clean up resources)
-* Xóa 2 Schedule trong Amazon EventBridge Scheduler.
-* Xóa 2 Lambda Function (`EC2-Auto-Stop`, `EC2-Auto-Start`).
-* Xóa IAM Role `Lambda-EC2-Slack-Role`.
-* Xóa EC2 Instance đã tạo để tránh phát sinh chi phí duy trì.
+Thực hiện dọn dẹp để tránh phát sinh chi phí:
+```bash
+aws lambda delete-function --function-name "dc-common-lambda-auto-stop"
+aws iam delete-role --role-name "dc-common-lambda-role"
+aws ec2 terminate-instances --instance-ids <instance-id>
+```

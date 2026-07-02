@@ -211,202 +211,116 @@ aws cloudformation delete-stack --stack-name "Lab20-Stack"
 #### Lab 3: EC2 Automation with AWS Lambda & Slack Notification (Lab 22)
 
 ##### 1. Introduction
-Cost Optimization is a key pillar of the AWS Well-Architected Framework. In practice, development or testing servers do not need to run 24/7. This lab builds a Serverless automation workflow: **AWS Lambda** runs daily, filtering instances by tag, automatically stopping them at 8:00 PM (end of day) and starting them at 8:00 AM (start of day), sending execution status alerts directly to **Slack**.
+#### Automate EC2 with AWS Lambda and Slack
 
-![Lambda EC2 Automation Flow](/images/worklog/week-10/lambda-ec2-diagram.png)
+##### 1. Introduction
+Cost Optimization is a key pillar of the AWS Well-Architected Framework. In practice, development or testing servers do not need to run 24/7. This lab builds a Serverless automation workflow: **AWS Lambda** runs daily, filtering instances by tag, automatically stopping them at 8:00 PM (end of day) and starting them at 8:00 AM (start of day), sending execution status alerts directly to **Slack**.
 
 ##### 2. Preparation
 
-###### 2.1 Set Up EC2 Instance
+###### 2.1 Set Up EC2 Instance & Tags
 * Deploy an EC2 Instance using Amazon Linux 2023.
 * Add tags to the instance:
-  * **Key:** `Auto-Stop-Start`
+  * **Key:** `environment_auto`
   * **Value:** `true`
+* Verified EC2 instance tag configuration on the console:
+
+![EC2 Instance Tags](/images/worklog/week-10/2_ec2_instance_tags.png)
 
 ###### 2.2 Create Slack Incoming Webhook
 To send notifications from AWS Lambda to Slack:
-1. Go to the [Slack API Console](https://api.slack.com/apps) -> Click **Create New App** -> Choose **From scratch**.
-2. Name the app `AWS-Ops-Bot` and choose your Workspace.
-3. Select **Incoming Webhooks**, toggle it to **On**.
-4. Click **Add New Webhook to Workspace**, select the target channel (e.g., `#aws-alerts`), and authorize it.
-5. Copy the Webhook URL (format: `https://hooks.slack.com/services/TXXXXX/BXXXXX/XXXXXXXXXX`).
-
----
+1. Log into Slack and navigate to Incoming Webhooks configuration.
+2. Create a channel named `#notification` to receive alerts.
+3. Enable the Webhook and copy the URL (format: `https://hooks.slack.com/services/TXXXXX/BXXXXX/XXXXXXXXXX`).
 
 ##### 3. Create IAM Role for Lambda Function
 Lambda needs IAM permissions to describe, start, and stop EC2 instances, and write Execution logs to CloudWatch Logs.
+1. Create a new IAM Role named `dc-common-lambda-role` with `lambda.amazonaws.com` as the Trusted Entity.
+2. Attach the existing managed policies:
+   * `AmazonEC2FullAccess`
+   * `CloudWatchFullAccess`
+3. Verified the Lambda IAM Role permissions attached on the console:
 
-1. Go to **IAM Console** -> **Roles** -> Click **Create role**.
-2. Select **Lambda** as the trusted service.
-3. Attach a custom inline policy with the following JSON:
-```json
-{
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Effect": "Allow",
-            "Action": [
-                "ec2:DescribeInstances",
-                "ec2:StartInstances",
-                "ec2:StopInstances"
-            ],
-            "Resource": "*"
-        },
-        {
-            "Effect": "Allow",
-            "Action": [
-                "logs:CreateLogGroup",
-                "logs:CreateLogStream",
-                "logs:PutLogEvents"
-            ],
-            "Resource": "arn:aws:logs:*:*:*"
-        }
-    ]
-}
-```
-4. Name the IAM Role `Lambda-EC2-Slack-Role`.
-
----
+![IAM Role Lambda](/images/worklog/week-10/1_iam_role_lambda.png)
 
 ##### 4. Deploy AWS Lambda Functions
 We implement Python code using the `boto3` SDK to control resources.
 
-###### 4.1 Create the Stop Function (`EC2-Auto-Stop`)
-1. Open the **AWS Lambda Console** -> Click **Create function**.
-2. Configuration details:
-   * **Function name:** `EC2-Auto-Stop`
-   * **Runtime:** `Python 3.12`
-   * **Execution role:** Select *Use an existing role*, choose `Lambda-EC2-Slack-Role`.
-3. In the Code source editor, enter the following code:
+###### 4.1 Create the Stop Function (`dc-common-lambda-auto-stop`)
+1. Create a Lambda Function named `dc-common-lambda-auto-stop` using the `Python 3.11` runtime and attach the `dc-common-lambda-role` execution role.
+2. Configure Environment Variables by setting `environment_auto = true`.
+3. Verified Lambda Environment Variable configuration on the console:
 
+![Lambda Environment Variable](/images/worklog/week-10/3_lambda_environment_variable.png)
+
+4. Enter the following Python code in the Code source editor:
 ```python
-import json
-import urllib.request
 import boto3
+import os
+import json
+import urllib3
 
-ec2 = boto3.client('ec2', region_name='ap-southeast-1')
-SLACK_WEBHOOK_URL = "https://hooks.slack.com/services/TXXXXX/BXXXXX/XXXXXXXXXX" # Replace with your webhook
+ec2_resource = boto3.resource('ec2')
+http = urllib3.PoolManager()
+webhook_url = "https://hooks.slack.com/services/TXXXXX/BXXXXX/XXXXXXXXXX" # Replace with your webhook
 
 def lambda_handler(event, context):
-    # Filter running instances with tag Auto-Stop-Start = true
-    filters = [
-        {'Name': 'tag:Auto-Stop-Start', 'Values': ['true']},
-        {'Name': 'instance-state-name', 'Values': ['running']}
-    ]
-    
-    response = ec2.describe_instances(Filters=filters)
-    instance_ids = []
-    
-    for reservation in response['Reservations']:
-        for instance in reservation['Instances']:
-            instance_ids.append(instance['InstanceId'])
-            
-    if len(instance_ids) > 0:
-        ec2.stop_instances(InstanceIds=instance_ids)
-        message = f"🛑 *AWS Lambda Alert:* Successfully stopped EC2 Instances: {', '.join(instance_ids)}"
+    environment_auto = os.environ.get('environment_auto')
+    if not environment_auto:
+        print('Target is empty')
+        return {"statusCode": 400, "body": "Target Tag is empty"}
     else:
-        message = "ℹ️ *AWS Lambda Info:* No running EC2 Instances found with tag `Auto-Stop-Start: true` to stop."
-        
-    # Send message to Slack
-    slack_message = {"text": message}
-    req = urllib.request.Request(
-        SLACK_WEBHOOK_URL,
-        data=json.dumps(slack_message).encode('utf-8'),
-        headers={'Content-Type': 'application/json'}
-    )
-    urllib.request.urlopen(req)
-    
-    return {
-        'statusCode': 200,
-        'body': json.dumps(message)
-    }
-```
+        instances = ec2_resource.instances.filter(
+            Filters=[{'Name': 'tag:environment_auto', 'Values': [environment_auto]}]
+        )     
+        if not list(instances):
+            response = {
+                "statusCode": 500,
+                "body": "Target Instance is None"
+            }
+        else:
+            action_stop = instances.stop()
+            sent_slack(action_stop)
+            response = {
+                "statusCode": 200,
+                "body": "EC2 Stopping"
+            }
+        return response
 
-4. Click **Deploy**.
-
-###### 4.2 Create the Start Function (`EC2-Auto-Start`)
-1. Create a new function named `EC2-Auto-Start` with the same configuration.
-2. In the Code source editor, enter:
-
-```python
-import json
-import urllib.request
-import boto3
-
-ec2 = boto3.client('ec2', region_name='ap-southeast-1')
-SLACK_WEBHOOK_URL = "https://hooks.slack.com/services/TXXXXX/BXXXXX/XXXXXXXXXX" # Replace with your webhook
-
-def lambda_handler(event, context):
-    # Filter stopped instances with tag Auto-Stop-Start = true
-    filters = [
-        {'Name': 'tag:Auto-Stop-Start', 'Values': ['true']},
-        {'Name': 'instance-state-name', 'Values': ['stopped']}
-    ]
-    
-    response = ec2.describe_instances(Filters=filters)
-    instance_ids = []
-    
-    for reservation in response['Reservations']:
-        for instance in reservation['Instances']:
-            instance_ids.append(instance['InstanceId'])
-            
-    if len(instance_ids) > 0:
-        ec2.start_instances(InstanceIds=instance_ids)
-        message = f"🚀 *AWS Lambda Alert:* Successfully started EC2 Instances: {', '.join(instance_ids)}"
+def sent_slack(action_stop):
+    list_instance_id = []
+    if (len(action_stop) > 0) and ("StoppingInstances" in action_stop[0]) and (len(action_stop[0]["StoppingInstances"]) > 0):
+        for i in action_stop[0]["StoppingInstances"]:
+            list_instance_id.append(i["InstanceId"])
+        msg = "Stopping Instances ID:\n %s" % (list_instance_id)
+        data = {"text": msg}
+        r = http.request("POST",
+            webhook_url,
+            body = json.dumps(data),
+            headers = {"Content-Type": "application/json"})
     else:
-        message = "ℹ️ *AWS Lambda Info:* No stopped EC2 Instances found with tag `Auto-Stop-Start: true` to start."
-        
-    # Send message to Slack
-    slack_message = {"text": message}
-    req = urllib.request.Request(
-        SLACK_WEBHOOK_URL,
-        data=json.dumps(slack_message).encode('utf-8'),
-        headers={'Content-Type': 'application/json'}
-    )
-    urllib.request.urlopen(req)
-    
-    return {
-        'statusCode': 200,
-        'body': json.dumps(message)
-    }
+        print('Not found Instances Stop')
 ```
-
-3. Click **Deploy**.
-
----
 
 ##### 5. Configure Triggers via Amazon EventBridge Scheduler
-Set up recurring schedules to execute the Lambda functions.
-
-1. Go to **Amazon EventBridge** -> **Schedulers** -> Click **Create schedule**.
-2. **Auto-Stop Schedule Configuration:**
-   * **Schedule name:** `Daily-EC2-Stop`
-   * **Occurrence:** `Recurring schedule`
-   * **Schedule type:** `Cron-based schedule`
-   * **Expression:** `0 20 ? * MON-FRI *` (Runs at 8:00 PM UTC/Local, Monday through Friday).
-   * **Target:** Select `AWS Lambda` -> Choose `EC2-Auto-Stop`.
-   * Click **Create schedule**.
-3. **Auto-Start Schedule Configuration:**
-   * **Schedule name:** `Daily-EC2-Start`
-   * **Occurrence:** `Recurring schedule`
-   * **Schedule type:** `Cron-based schedule`
-   * **Expression:** `0 8 ? * MON-FRI *` (Runs at 8:00 AM UTC/Local, Monday through Friday).
-   * **Target:** Select `AWS Lambda` -> Choose `EC2-Auto-Start`.
-   * Click **Create schedule**.
-
----
+Set up recurring schedules to execute the Lambda functions based on Cron expressions:
+* Rule Stop (`dc-common-lambda-auto-stop`): Scheduled to stop the servers at 8:00 PM on weekdays.
+* Rule Start (`dc-common-lambda-auto-start`): Scheduled to start the servers at 8:00 AM.
 
 ##### 6. Check Result
-1. Run a manual test by clicking **Test** in the `EC2-Auto-Stop` function console.
-2. Check the EC2 Instances page to see if your instance transitions from `running` to `stopping`/`stopped`.
-3. Check your **Slack** channel to confirm the alert notification is posted.
+1. Perform a manual test by clicking **Test** in the `dc-common-lambda-auto-stop` function console.
+2. Verified successful Lambda execution returning `statusCode: 200`:
 
-![Ops Bot Slack Notification](/images/worklog/week-10/slack-notification.png)
+![Lambda Execution Success](/images/worklog/week-10/4_lambda_execution_success.png)
 
----
+3. Verified the target EC2 Instance successfully transitioned to the `stopped` state on the console:
+
+![EC2 Stopped Status](/images/worklog/week-10/5_ec2_stopped_status.png)
 
 ##### 7. Clean up resources
-* Delete both EventBridge Schedules.
-* Delete both Lambda Functions (`EC2-Auto-Stop`, `EC2-Auto-Start`).
-* Delete the IAM Role `Lambda-EC2-Slack-Role`.
-* Terminate the target EC2 Instance.
+Perform resource cleanup to avoid unnecessary costs:
+```bash
+aws lambda delete-function --function-name "dc-common-lambda-auto-stop"
+aws iam delete-role --role-name "dc-common-lambda-role"
+aws ec2 terminate-instances --instance-ids <instance-id>
+```
