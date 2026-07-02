@@ -320,6 +320,8 @@ aws backup start-backup-job --backup-vault-name "BACKUP-LAB-VAULT" --resource-ar
   * Truy cập vào dịch vụ **Amazon CloudWatch** > **Log groups**.
   * Tìm đến Log group có tên `/aws/lambda/RestoreTestFunction-Backup-plan` đại diện cho hàm Lambda thực thi bài lab.
   * Chọn **Log streams** gần nhất để theo dõi chi tiết quá trình Lambda tự động gửi yêu cầu khôi phục (`Restore job`), kiểm tra Health Check trạng thái ứng dụng trên EC2 khôi phục, và tự động gọi API dọn dẹp các bản khôi phục thử nghiệm để tối ưu chi phí.
+
+![CloudWatch Log Group Not Found](/images/worklog/week-7/3_cloudwatch_logs.png)
 * **Xử lý sự cố (Troubleshooting):** Khi chạy tác vụ, Job báo trạng thái `Failed` với lỗi `Access denied`. 
   * *Nguyên nhân:* Do tài khoản IAM User hiện tại chưa được cấp quyền `iam:PassRole` cho vai trò dịch vụ `AWSServiceRoleForBackup`, dẫn đến việc AWS Backup bị chặn khi thực hiện tương tác sao lưu EBS Volume cục bộ. Đây là một điểm cần chú ý về phân quyền bảo mật Least Privilege khi triển khai thực tế.
 

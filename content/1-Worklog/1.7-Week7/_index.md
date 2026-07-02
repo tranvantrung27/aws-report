@@ -318,6 +318,8 @@ aws backup start-backup-job --backup-vault-name "BACKUP-LAB-VAULT" --resource-ar
   * Navigate to **Amazon CloudWatch** > **Log groups**.
   * Locate the Log group named `/aws/lambda/RestoreTestFunction-Backup-plan` representing the helper Lambda function.
   * Open the latest **Log stream** to monitor details of the restore job triggered by Lambda, its health checks on the restored resources, and the subsequent automated cleanup.
+
+![CloudWatch Log Group Not Found](/images/worklog/week-7/3_cloudwatch_logs.png)
 * **Troubleshooting:** The backup job returned a `Failed` status with an `Access denied` error.
   * *Reason:* The IAM User lacked `iam:PassRole` permissions for the `AWSServiceRoleForBackup` role. This prevents AWS Backup from assuming the role to perform EBS Volume backup operations, showcasing security boundary rules on actual AWS setups.
 
