@@ -29,18 +29,147 @@ pre: " <b> 1.7. </b> "
 
 #### Lab 1: Interacting with Resources using AWS CLI (Lab 11)
 ##### 1. Introduction
+The Amazon Web Services Command Line Interface (AWS CLI) is an open-source tool that enables interaction with AWS services using commands in your command-line shell. Utilizing the CLI helps automate administration tasks, rapidly set up resources, and eliminate manual console clicks.
+
 ##### 2. Preparation
+* An active AWS account with administrative permissions.
+* Configured default profile with:
+  * AWS Access Key ID and Secret Access Key.
+  * Default region: `ap-southeast-1` (Singapore).
+  * Output format: `json`.
+
 ##### 3. Install AWS CLI
+* Downloaded and installed AWS CLI v2 on Windows via MSI installer.
+* Verified installation version:
+```bash
+aws --version
+# Output: aws-cli/2.34.46 Python/3.14.4 Windows/11 exe/AMD64
+```
+* Configured local credentials:
+```bash
+aws configure
+```
+
 ##### 4. View resource via CLI
+* Listed existing resources on the account:
+```bash
+aws s3 ls
+aws ec2 describe-instances --output table --region ap-southeast-1
+```
+
 ##### 5. AWS CLI with Amazon S3
+* Created a globally unique S3 Bucket:
+```bash
+aws s3 mb s3://tranvantrung-lab11-cli-2026 --region ap-southeast-1
+```
+* Enabled Bucket Versioning:
+```bash
+aws s3api put-bucket-versioning --bucket tranvantrung-lab11-cli-2026 --versioning-configuration Status=Enabled
+```
+* Created a test file and uploaded it to S3:
+```bash
+echo "Hello from AWS CLI Lab 11" > lab11-test.txt
+aws s3 cp lab11-test.txt s3://tranvantrung-lab11-cli-2026/
+```
+* Verified bucket configuration in S3 console:
+
+![S3 Versioning Enabled](/images/worklog/week-7/1_s3_bucket.png)
+
 ##### 6. AWS CLI with Amazon SNS
+* Created a new standard SNS Topic:
+```bash
+aws sns create-topic --name "lab11-sns-topic"
+```
+* Subscribed an email endpoint to the topic:
+```bash
+aws sns subscribe --topic-arn "arn:aws:sns:ap-southeast-1:938834038589:lab11-sns-topic" --protocol email --notification-endpoint "tranvantrung27@gmail.com"
+```
+* Verified topic creation in SNS Dashboard:
+
+![SNS Dashboard](/images/worklog/week-7/1_sns_topic.png)
+
 ##### 7. AWS CLI with IAM
+* Created Group `dev` and User `dev-1`:
+```bash
+aws iam create-group --group-name "dev"
+aws iam create-user --user-name "dev-1"
+```
+* Added User to Group dev:
+```bash
+aws iam add-user-to-group --user-name "dev-1" --group-name "dev"
+```
+* Created Access Key and Secret Key for the user:
+```bash
+aws iam create-access-key --user-name "dev-1"
+```
+
 ##### 8. AWS CLI with VPC
 ###### 8.1 AWS CLI with VPC
+* Created a new VPC with CIDR block `10.0.0.0/16`:
+```bash
+aws ec2 create-vpc --cidr-block 10.0.0.0/16
+```
+* Created Public and Private subnets:
+```bash
+aws ec2 create-subnet --vpc-id vpc-018752326f096b570 --cidr-block 10.0.1.0/24
+aws ec2 create-subnet --vpc-id vpc-018752326f096b570 --cidr-block 10.0.2.0/24
+```
+* Created a route table for the public subnet:
+```bash
+aws ec2 create-route-table --vpc-id vpc-018752326f096b570
+```
+
 ###### 8.2 AWS CLI with Internet Gateway
+* Created and attached an Internet Gateway (IGW) to the VPC:
+```bash
+aws ec2 create-internet-gateway
+aws ec2 attach-internet-gateway --vpc-id vpc-018752326f096b570 --internet-gateway-id igw-00446df6401dd9c1b
+```
+* Configured route table path to Internet via IGW (0.0.0.0/0) and associated it with the public subnet:
+```bash
+aws ec2 create-route --route-table-id rtb-0321d43c16d3d1af1 --destination-cidr-block 0.0.0.0/0 --gateway-id igw-00446df6401dd9c1b
+aws ec2 associate-route-table --subnet-id subnet-071c3cdbe2ba64c01 --route-table-id rtb-0321d43c16d3d1af1
+```
+
 ##### 9. Creating EC2 Using AWS CLI
+* Created a security group and configured RDP/SSH access rules:
+```bash
+aws ec2 create-security-group --group-name "MyLabSG" --description "Lab security group" --vpc-id vpc-018752326f096b570
+aws ec2 authorize-security-group-ingress --group-id sg-0735cc3fa537bb0ee --protocol tcp --port 22 --cidr 0.0.0.0/0
+```
+* Generated an EC2 Key Pair:
+```bash
+aws ec2 create-key-pair --key-name "MyKeyPair" --query "KeyMaterial" --output text > MyKeyPair.pem
+```
+* Launched the EC2 instance using a Free Tier eligible instance type (`t3.micro`):
+```bash
+aws ec2 run-instances --image-id ami-047126e50991d067b --count 1 --instance-type t3.micro --key-name "MyKeyPair" --security-group-ids sg-0735cc3fa537bb0ee --subnet-id subnet-071c3cdbe2ba64c01 --associate-public-ip-address
+```
+* Verified instance running state in EC2 console:
+
+![EC2 Instance Running](/images/worklog/week-7/1_ec2_running.png)
+
 ##### 10. Troubleshooting
+* **InvalidParameterCombination:** Default `t2.micro` was blocked because of AWS Academy Starter restrictions. Fixed by using `t3.micro` which is permitted under current student policies.
+* **BucketNotEmpty:** Deleting a versioned bucket failed. Fixed by listing and deleting all versions and delete markers first.
+
 ##### 11. Clean up resources
+Cleaned up all resources to avoid charges:
+```bash
+aws ec2 terminate-instances --instance-ids i-0d613d864f17ca80a
+aws ec2 delete-security-group --group-id sg-0735cc3fa537bb0ee
+aws ec2 delete-subnet --subnet-id subnet-071c3cdbe2ba64c01
+aws ec2 delete-subnet --subnet-id subnet-0bbcfd2ca287686cf
+aws ec2 delete-route-table --route-table-id rtb-0321d43c16d3d1af1
+aws ec2 detach-internet-gateway --internet-gateway-id igw-00446df6401dd9c1b --vpc-id vpc-018752326f096b570
+aws ec2 delete-internet-gateway --internet-gateway-id igw-00446df6401dd9c1b
+aws ec2 delete-vpc --vpc-id vpc-018752326f096b570
+aws s3 rb s3://tranvantrung-lab11-cli-2026/ --force
+aws sns delete-topic --topic-arn "arn:aws:sns:ap-southeast-1:938834038589:lab11-sns-topic"
+aws iam delete-user --user-name "dev-1"
+aws iam delete-group --group-name "dev"
+```
+
 
 ---
 

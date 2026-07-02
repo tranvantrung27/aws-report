@@ -29,18 +29,149 @@ pre: " <b> 1.7. </b> "
 
 #### Lab 1: Tương tác với tài nguyên bằng AWS CLI (Lab 11)
 ##### 1. Giới thiệu (Introduction)
+Amazon Web Services Command Line Interface (AWS CLI) là một công cụ mã nguồn mở giúp tương tác với các dịch vụ của AWS thông qua các dòng lệnh trong màn hình terminal. Việc sử dụng CLI giúp tự động hóa các tác vụ quản trị, thiết lập tài nguyên nhanh chóng và loại bỏ các thao tác click thủ công tốn thời gian trên AWS Management Console.
+
 ##### 2. Chuẩn bị (Preparation)
+* Tài khoản AWS đang hoạt động với quyền quản trị.
+* Thiết lập cấu hình profile mặc định với các tham số:
+  * AWS Access Key ID và Secret Access Key.
+  * Default region: `ap-southeast-1` (Singapore).
+  * Output format: `json`.
+
 ##### 3. Cài đặt AWS CLI (Install AWS CLI)
+* Tải xuống và cài đặt AWS CLI v2 trên Windows bằng gói cài đặt MSI.
+* Kiểm tra phiên bản cài đặt thành công:
+```bash
+aws --version
+# Kết quả: aws-cli/2.34.46 Python/3.14.4 Windows/11 exe/AMD64
+```
+* Cấu hình thông tin xác thực:
+```bash
+aws configure
+```
+
 ##### 4. Xem tài nguyên qua CLI (View resource via CLI)
+* Liệt kê các tài nguyên hiện có trên tài khoản:
+```bash
+aws s3 ls
+aws ec2 describe-instances --output table --region ap-southeast-1
+```
+
 ##### 5. AWS CLI với Amazon S3
+* Khởi tạo S3 Bucket có tên duy nhất toàn cầu:
+```bash
+aws s3 mb s3://tranvantrung-lab11-cli-2026 --region ap-southeast-1
+```
+* Bật tính năng lưu trữ phiên bản (Versioning) cho Bucket:
+```bash
+aws s3api put-bucket-versioning --bucket tranvantrung-lab11-cli-2026 --versioning-configuration Status=Enabled
+```
+* Tạo tệp tin thử nghiệm và tải lên S3:
+```bash
+echo "Hello from AWS CLI Lab 11" > lab11-test.txt
+aws s3 cp lab11-test.txt s3://tranvantrung-lab11-cli-2026/
+```
+* Xác minh trạng thái cấu hình Bucket trên Console:
+
+![S3 Versioning Enabled](/images/worklog/week-7/1_s3_bucket.png)
+
 ##### 6. AWS CLI với Amazon SNS
+* Khởi tạo một SNS Topic mới:
+```bash
+aws sns create-topic --name "lab11-sns-topic"
+```
+* Đăng ký nhận thông báo qua email:
+```bash
+aws sns subscribe --topic-arn "arn:aws:sns:ap-southeast-1:938834038589:lab11-sns-topic" --protocol email --notification-endpoint "tranvantrung27@gmail.com"
+```
+* Xác minh SNS Topic hiển thị trên Console:
+
+![SNS Dashboard](/images/worklog/week-7/1_sns_topic.png)
+
 ##### 7. AWS CLI với IAM
+* Tạo Group `dev` và User `dev-1`:
+```bash
+aws iam create-group --group-name "dev"
+aws iam create-user --user-name "dev-1"
+```
+* Thêm User vào Group dev:
+```bash
+aws iam add-user-to-group --user-name "dev-1" --group-name "dev"
+```
+* Khởi tạo Access Key và Secret Access Key cho user:
+```bash
+aws iam create-access-key --user-name "dev-1"
+```
+
 ##### 8. AWS CLI với VPC
 ###### 8.1 AWS CLI với VPC
+* Khởi tạo VPC mới với dải mạng CIDR `10.0.0.0/16`:
+```bash
+aws ec2 create-vpc --cidr-block 10.0.0.0/16
+```
+* Khởi tạo Public Subnet và Private Subnet:
+```bash
+aws ec2 create-subnet --vpc-id vpc-018752326f096b570 --cidr-block 10.0.1.0/24
+aws ec2 create-subnet --vpc-id vpc-018752326f096b570 --cidr-block 10.0.2.0/24
+```
+* Tạo Route Table cho Public Subnet:
+```bash
+aws ec2 create-route-table --vpc-id vpc-018752326f096b570
+```
+
 ###### 8.2 AWS CLI với Internet Gateway
+* Khởi tạo Internet Gateway (IGW) và liên kết vào VPC:
+```bash
+aws ec2 create-internet-gateway
+aws ec2 attach-internet-gateway --vpc-id vpc-018752326f096b570 --internet-gateway-id igw-00446df6401dd9c1b
+```
+* Cấu hình Route chuyển tiếp dữ liệu ra internet qua IGW (0.0.0.0/0) và liên kết subnet công cộng:
+```bash
+aws ec2 create-route --route-table-id rtb-0321d43c16d3d1af1 --destination-cidr-block 0.0.0.0/0 --gateway-id igw-00446df6401dd9c1b
+aws ec2 associate-route-table --subnet-id subnet-071c3cdbe2ba64c01 --route-table-id rtb-0321d43c16d3d1af1
+```
+
 ##### 9. Khởi tạo EC2 bằng AWS CLI (Creating EC2 Using AWS CLI)
+* Tạo Security Group cho máy ảo EC2 và mở cổng truy cập SSH (Port 22):
+```bash
+aws ec2 create-security-group --group-name "MyLabSG" --description "Lab security group" --vpc-id vpc-018752326f096b570
+aws ec2 authorize-security-group-ingress --group-id sg-0735cc3fa537bb0ee --protocol tcp --port 22 --cidr 0.0.0.0/0
+```
+* Tạo cặp Key Pair để truy cập SSH:
+```bash
+aws ec2 create-key-pair --key-name "MyKeyPair" --query "KeyMaterial" --output text > MyKeyPair.pem
+```
+* Khởi chạy instance EC2 (Loại máy ảo `t3.micro` thuộc danh mục Free Tier được cấu hình trên tài khoản):
+```bash
+aws ec2 run-instances --image-id ami-047126e50991d067b --count 1 --instance-type t3.micro --key-name "MyKeyPair" --security-group-ids sg-0735cc3fa537bb0ee --subnet-id subnet-071c3cdbe2ba64c01 --associate-public-ip-address
+```
+* Kiểm tra máy chủ hiển thị trạng thái `Running` trên Console:
+
+![EC2 Instance Running](/images/worklog/week-7/1_ec2_running.png)
+
 ##### 10. Xử lý sự cố (Troubleshooting)
+* **Lỗi InvalidParameterCombination:** Khi khởi tạo máy ảo, loại instance `t2.micro` mặc định bị chặn do chính sách quản lý học tập (AWS Academy chỉ cho phép các loại máy ảo thuộc Free Tier cụ thể như `t3.micro`).
+  * *Khắc phục:* Thay đổi tham số `--instance-type` thành `t3.micro` để hệ thống khởi chạy thành công.
+* **Lỗi BucketNotEmpty:** Khi thực hiện xóa S3 Bucket đã bật tính năng Versioning, lệnh xóa bucket thông thường sẽ lỗi vì các phiên bản ẩn vẫn còn.
+  * *Khắc phục:* Sử dụng `list-object-versions` kết hợp vòng lặp xóa sạch toàn bộ `Versions` và `DeleteMarkers` trước khi xóa Bucket.
+
 ##### 11. Dọn dẹp tài nguyên (Clean up resources)
+Để tránh phát sinh chi phí sau bài lab, toàn bộ tài nguyên đã được xóa sạch theo trình tự ngược lại:
+```bash
+aws ec2 terminate-instances --instance-ids i-0d613d864f17ca80a
+aws ec2 delete-security-group --group-id sg-0735cc3fa537bb0ee
+aws ec2 delete-subnet --subnet-id subnet-071c3cdbe2ba64c01
+aws ec2 delete-subnet --subnet-id subnet-0bbcfd2ca287686cf
+aws ec2 delete-route-table --route-table-id rtb-0321d43c16d3d1af1
+aws ec2 detach-internet-gateway --internet-gateway-id igw-00446df6401dd9c1b --vpc-id vpc-018752326f096b570
+aws ec2 delete-internet-gateway --internet-gateway-id igw-00446df6401dd9c1b
+aws ec2 delete-vpc --vpc-id vpc-018752326f096b570
+aws s3 rb s3://tranvantrung-lab11-cli-2026/ --force
+aws sns delete-topic --topic-arn "arn:aws:sns:ap-southeast-1:938834038589:lab11-sns-topic"
+aws iam delete-user --user-name "dev-1"
+aws iam delete-group --group-name "dev"
+```
+
 
 ---
 
