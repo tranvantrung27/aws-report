@@ -316,6 +316,10 @@ aws backup put-backup-vault-notifications --region ap-southeast-1 --backup-vault
 ```bash
 aws backup start-backup-job --backup-vault-name "BACKUP-LAB-VAULT" --resource-arn "arn:aws:ec2:ap-southeast-1:938834038589:instance/i-0b0e170ebbc2e6f06" --iam-role-arn "arn:aws:iam::938834038589:role/aws-service-role/backup.amazonaws.com/AWSServiceRoleForBackup"
 ```
+* **Theo dõi và kiểm tra qua CloudWatch Logs:**
+  * Truy cập vào dịch vụ **Amazon CloudWatch** > **Log groups**.
+  * Tìm đến Log group có tên `/aws/lambda/RestoreTestFunction-Backup-plan` đại diện cho hàm Lambda thực thi bài lab.
+  * Chọn **Log streams** gần nhất để theo dõi chi tiết quá trình Lambda tự động gửi yêu cầu khôi phục (`Restore job`), kiểm tra Health Check trạng thái ứng dụng trên EC2 khôi phục, và tự động gọi API dọn dẹp các bản khôi phục thử nghiệm để tối ưu chi phí.
 * **Xử lý sự cố (Troubleshooting):** Khi chạy tác vụ, Job báo trạng thái `Failed` với lỗi `Access denied`. 
   * *Nguyên nhân:* Do tài khoản IAM User hiện tại chưa được cấp quyền `iam:PassRole` cho vai trò dịch vụ `AWSServiceRoleForBackup`, dẫn đến việc AWS Backup bị chặn khi thực hiện tương tác sao lưu EBS Volume cục bộ. Đây là một điểm cần chú ý về phân quyền bảo mật Least Privilege khi triển khai thực tế.
 
