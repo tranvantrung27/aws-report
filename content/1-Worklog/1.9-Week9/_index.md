@@ -324,18 +324,30 @@ Delete CodeBuild projects, terminate GitLab Runner EC2 instances, empty and dele
 
 ##### 1. Security Standards
 **AWS Security Hub** automatically audits resource configurations against recommended standards:
-* **AWS Foundational Security Best Practices (FSBP)**: Designed by AWS security experts.
-* **CIS AWS Foundations Benchmark v1.2.0 & v1.4.0**: Consensus-based industry guidelines.
+* **AWS Foundational Security Best Practices (FSBP)**: Standard developed by AWS security experts.
+* **CIS AWS Foundations Benchmark v1.2.0 & v1.4.0**: Industry-recognized security guidelines.
+* **PCI DSS v3.2.1**: Compliance standards for payment card handling security.
 
-##### 2. Enable Security Hub
+##### 2. Enable Security Hub & AWS Config
+###### 2.1. Configure AWS Config Recorder (Required)
+AWS Security Hub depends on AWS Config rules to monitor infrastructure compliance status:
+* Open the **AWS Config** Console and click **Get Started**.
+* Enable recording for all resource types supported in the region.
+* Set up a delivery channel pointing to a newly created S3 bucket (e.g. `config-bucket-<account-id>`).
+* Save and confirm configuration settings.
+
+###### 2.2. Enable AWS Security Hub
 * Open the AWS Security Hub Console.
-* Click **Enable Security Hub**.
-* Enable both FSBP and CIS standards. Allow several hours for the initial scan to generate a report.
+* Click **Enable Security Hub** and select the security standards (FSBP, CIS AWS Foundations, PCI DSS).
+* *Note*: On AWS Academy Learner Sandbox environments, automated package subscription is restricted under IAM Boundary restrictions (`SubscriptionRequiredException`). However, integration workflows with AWS Config are fully validated.
 
 ##### 3. Security Score by Standards
-* View the compliance percentage (**Security Score**) on the Security Hub dashboard.
-* Drill down into critical, high, medium, and low severity **Findings**.
-* Follow the provided **Remediation** steps for failing checks (e.g., configuring MFA for the root account, narrowing wide Security Group rules, or blocking S3 public access).
+* Once initialized, the dashboard shows compliance percentages (**Security Score**) for each active standard.
+* Warnings/violations are categorized as `Critical`, `High`, `Medium`, and `Low` severity **Findings**.
+* **How to disable a security control**: Select the target control inside the standard list, click **Disable control**, specify a reason (e.g. *Not aligned to risk threshold*), and click **Disable** to exclude it.
 
 ##### 4. Clean Up Resources
-Disable AWS Security Hub once report data is gathered to avoid ongoing monitoring costs.
+Disable services to stop billing:
+1. **Disable Security Hub**: Go to *Settings > General* and click *Disable AWS Security Hub*.
+2. **Stop AWS Config Recorder**: Open AWS Config Settings -> Click *Stop recording* and confirm.
+3. **Delete S3 Bucket**: Empty contents inside the S3 delivery bucket and delete the bucket.

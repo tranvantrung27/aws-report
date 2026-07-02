@@ -315,20 +315,32 @@ Xóa các dự án CodeBuild, xóa GitLab Runner trên EC2, tắt máy ảo EC2,
 #### Lab 3: Đánh giá an toàn hệ thống với AWS Security Hub (Lab 18)
 
 ##### 1. Tiêu chuẩn bảo mật (Security Standards)
-**AWS Security Hub** cung cấp một cái nhìn toàn diện về trạng thái bảo mật của toàn bộ tài khoản AWS của bạn bằng cách liên tục kiểm tra tài nguyên hệ thống dựa trên các bộ tiêu chuẩn công nghiệp. Hai bộ tiêu chuẩn chính được sử dụng bao gồm:
+**AWS Security Hub** cung cấp một cái nhìn toàn diện về trạng thái bảo mật của toàn bộ tài khoản AWS bằng cách liên tục kiểm tra tài nguyên hệ thống dựa trên các bộ tiêu chuẩn công nghiệp. Các bộ tiêu chuẩn chính được sử dụng bao gồm:
 * **AWS Foundational Security Best Practices (FSBP)**: Tập hợp các quy tắc bảo mật được thiết kế bởi AWS.
 * **CIS AWS Foundations Benchmark v1.2.0 & v1.4.0**: Các hướng dẫn bảo mật khách quan, đồng thuận từ các chuyên gia bảo mật.
+* **PCI DSS v3.2.1**: Tiêu chuẩn bảo mật dữ liệu dành cho các tổ chức xử lý thẻ thanh toán.
 
-##### 2. Kích hoạt Security Hub
+##### 2. Kích hoạt Security Hub & Thiết lập AWS Config
+###### 2.1. Cấu hình dịch vụ AWS Config (Bắt buộc)
+AWS Security Hub hoạt động dựa trên các rule của AWS Config để theo dõi trạng thái tài nguyên. Do đó, cần cấu hình recorder cho AWS Config trước:
+* Truy cập dịch vụ **AWS Config** và nhấn **Get Started**.
+* Tại cấu hình Record, chọn ghi nhận tất cả tài nguyên (`Record all resources supported in this region`).
+* Tạo một S3 bucket mới (ví dụ: `config-bucket-<account-id>`) để lưu trữ log trạng thái cấu hình.
+* Xác nhận và kích hoạt AWS Config recorder.
+
+###### 2.2. Kích hoạt AWS Security Hub
 * Truy cập vào AWS Security Hub Console.
-* Nhấp chọn **Enable Security Hub**.
-* Lựa chọn kích hoạt các tiêu chuẩn bảo mật mong muốn (FSBP và CIS). Quá trình quét và tổng hợp dữ liệu ban đầu sẽ mất vài giờ để hoàn thành.
+* Nhấp chọn **Enable Security Hub** và chọn các tiêu chuẩn bảo mật (FSBP, CIS AWS Foundations, PCI DSS).
+* *Lưu ý*: Đối với môi trường AWS Academy Sandbox, do giới hạn phân quyền IAM Boundary của tài khoản học tập (SubscriptionRequiredException), quá trình đăng ký gói subscription tự động bị chặn. Tuy nhiên, luồng thiết lập và cấu hình tích hợp với AWS Config recorder vẫn được khảo sát đầy đủ.
 
 ##### 3. Đánh giá Điểm số bảo mật theo Tiêu chuẩn (Security Score by Standards)
-* Theo dõi mục **Security Score** trên Dashboard để nắm bắt tỷ lệ phần trăm tuân thủ an toàn thông tin của tài khoản.
-* Phân tích các phát hiện (Findings) được phân loại theo mức độ nghiêm trọng (Critical, High, Medium, Low).
-* Đọc các khuyến nghị sửa lỗi (Remediation) đi kèm cho từng tài nguyên vi phạm (ví dụ: MFA chưa bật cho tài khoản root, Security Group mở cổng port 22 quá rộng, S3 bucket bật Public Access...).
+* Sau khi kích hoạt thành công, Dashboard Security Hub hiển thị tổng điểm **Security Score** (từ 0% đến 100%) đại diện cho tỷ lệ tuân thủ bảo mật.
+* Các cảnh báo (Findings) được phân loại theo mức độ nghiêm trọng: `Critical`, `High`, `Medium`, `Low`.
+* **Cách vô hiệu hóa một tiêu chí kiểm tra (Disable Control)**: Nếu một control không phù hợp với nhu cầu dự án, chọn Control đó, click **Disable control**, nhập lý do (ví dụ: *Not aligned to risk threshold*) và xác nhận.
 
 ##### 4. Dọn dẹp tài nguyên (Clean Up Resources)
-Sau khi hoàn tất quá trình đánh giá và ghi nhận kết quả cho báo cáo thực tập, thực hiện tắt/vô hiệu hóa AWS Security Hub để tránh phát sinh chi phí duy trì dịch vụ liên tục.
+Để tránh phát sinh chi phí duy trì dịch vụ AWS Config recorder và lưu trữ S3, thực hiện dọn dẹp như sau:
+1. **Disable Security Hub**: Vào mục *Settings > General* và chọn *Disable AWS Security Hub*.
+2. **Stop AWS Config recorder**: Vào AWS Config -> Settings -> Chọn *Stop recording* và xác nhận.
+3. **Xóa S3 Bucket**: Empty dữ liệu bên trong bucket log của AWS Config và tiến hành xóa bucket.
 
