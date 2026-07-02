@@ -12,42 +12,58 @@ pre: " <b> 1.7. </b> "
 * Understand basic AWS services, how to use the console & CLI.
 
 ### Tasks to be carried out this week:
-| Day | Task                                                                                                                                                                                                   | Start Date | Completion Date | Reference Material                        |
-| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------- | --------------- | ----------------------------------------- |
-| 2   | - Get acquainted with FCJ members <br> - Read and take note of internship unit rules and regulations                                                                                                   | 01/06/2026 | 01/06/2026 |
-| 3   | - Learn about AWS and its types of services <br>&emsp; + Compute <br>&emsp; + Storage <br>&emsp; + Networking <br>&emsp; + Database <br>&emsp; + ... <br>                                              | 02/06/2026 | 02/06/2026 | <https://cloudjourney.awsstudygroup.com/> |
-| 4   | - Create AWS Free Tier account <br> - Learn about AWS Console & AWS CLI <br> - **Practice:** <br>&emsp; + Create AWS account <br>&emsp; + Install & configure AWS CLI <br> &emsp; + How to use AWS CLI | 03/06/2026 | 03/06/2026 | <https://cloudjourney.awsstudygroup.com/> |
-| 5   | - Learn basic EC2: <br>&emsp; + Instance types <br>&emsp; + AMI <br>&emsp; + EBS <br>&emsp; + ... <br> - SSH connection methods to EC2 <br> - Learn about Elastic IP   <br>                            | 04/06/2026 | 04/06/2026 | <https://cloudjourney.awsstudygroup.com/> |
-| 6   | - **Practice:** <br>&emsp; + Launch an EC2 instance <br>&emsp; + Connect via SSH <br>&emsp; + Attach an EBS volume                                                                                     | 05/06/2026 | 05/06/2026 | <https://cloudjourney.awsstudygroup.com/> |
-| 7 - Sun | - **Advanced practice:** <br>&emsp; + Recreate the EC2 instance and configure the Security Group <br>&emsp; + Connect via SSH and install a Web Server (Apache/Nginx) <br>&emsp; + Deploy a simple website and access it through the Public IP | 06/06/2026 | 07/06/2026 | <https://cloudjourney.awsstudygroup.com/> |
+| Day | Task | Start Date | Completion Date | Reference Material |
+| --- | --- | --- | --- | --- |
+| 2 | - Learn AWS CLI & Installation <br> - View resources via CLI <br> - AWS CLI with Amazon S3 and Amazon SNS | 01/06/2026 | 01/06/2026 | [Installing the AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) <br> [AWS CLI Command Reference](https://awscli.amazonaws.com/v2/documentation/api/latest/index.html) |
+| 3 | - AWS CLI with IAM and VPC (VPC, Internet Gateway) <br> - Practice creating EC2 via AWS CLI | 02/06/2026 | 02/06/2026 | [AWS CLI for EC2 & VPC](https://docs.aws.amazon.com/cli/latest/userguide/cli-services-ec2.html) <br> [AWS CLI for IAM](https://docs.aws.amazon.com/cli/latest/userguide/cli-services-iam.html) |
+| 4 | - Learn AWS Organizations <br> - Create member accounts, configure Organizational Unit (OU) and invite AWS Accounts | 03/06/2026 | 03/06/2026 | [AWS Organizations User Guide](https://docs.aws.amazon.com/organizations/latest/userguide/orgs_introduction.html) <br> [Creating account in Organization](https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_accounts_create.html) |
+| 5 | - Configure Member Account access via CLI <br> - Configure Time-based access control & Customer Managed Policies <br> - Understand IAM Identity Center Identity Store APIs | 04/06/2026 | 04/06/2026 | [AWS IAM Identity Center Guide](https://docs.aws.amazon.com/singlesignon/latest/userguide/what-is.html) <br> [Identity Store APIs](https://docs.aws.amazon.com/singlesignon/latest/IdentityStoreAPIReference/welcome.html) |
+| 6 | - Learn AWS Backup service <br> - Prepare environment: Create S3 Bucket & Deploy Backup infrastructure | 05/06/2026 | 05/06/2026 | [What is AWS Backup?](https://docs.aws.amazon.com/aws-backup/latest/devguide/whatisbackup.html) <br> [Backup S3 with AWS Backup](https://docs.aws.amazon.com/aws-backup/latest/devguide/s3-backups.html) |
+| 7 - Sun | - Setup Backup plan & configure notifications <br> - Test Restore operations <br> - Clean up resources to prevent charges | 06/06/2026 | 07/06/2026 | [Creating backup plans](https://docs.aws.amazon.com/aws-backup/latest/devguide/creating-backup-plans.html) <br> [Restoring a backup](https://docs.aws.amazon.com/aws-backup/latest/devguide/restoring-backups.html) |
 
 ### Week 7 Achievements:
 
-* Understood what AWS is and mastered the basic service groups: 
-  * Compute
-  * Storage
-  * Networking 
-  * Database
-  * ...
+---
 
-* Successfully created and configured an AWS Free Tier account.
+### Week 7 Practice Details:
 
-* Became familiar with the AWS Management Console and learned how to find, access, and use services via the web interface.
+#### Lab 1: Interacting with Resources using AWS CLI (Lab 11)
+##### 1. Introduction
+##### 2. Preparation
+##### 3. Install AWS CLI
+##### 4. View resource via CLI
+##### 5. AWS CLI with Amazon S3
+##### 6. AWS CLI with Amazon SNS
+##### 7. AWS CLI with IAM
+##### 8. AWS CLI with VPC
+###### 8.1 AWS CLI with VPC
+###### 8.2 AWS CLI with Internet Gateway
+##### 9. Creating EC2 Using AWS CLI
+##### 10. Troubleshooting
+##### 11. Clean up resources
 
-* Installed and configured AWS CLI on the computer, including:
-  * Access Key
-  * Secret Key
-  * Default Region
-  * ...
+---
 
-* Used AWS CLI to perform basic operations such as:
+#### Lab 2: AWS Organizations & IAM Identity Center (Lab 12)
+##### 1. Preparation steps
+###### 1.1 Create AWS Account in AWS Organizations
+###### 1.2 Setting up the Organization Unit
+###### 1.3 Invite AWS Account to AWS Organization
+###### 1.4 Access member account in Organization
+##### 2. AWS CLI
+##### 3. Time-based access control
+##### 4. Customer Managed Policies
+##### 5. IAM Identity Center Identity Store APIs
+##### 6. Resource Cleanup
 
-  * Check account & configuration information
-  * Retrieve the list of regions
-  * View EC2 service
-  * Create and manage key pairs
-  * Check information about running services
-  * ...
+---
 
-* Acquired the ability to connect between the web interface and CLI to manage AWS resources in parallel.
-* ...
+#### Lab 3: AWS Backup (Lab 13)
+##### 1. Introduction
+##### 2. Preparation
+###### 2.1 Create S3 Bucket
+###### 2.2 Deploy infrastructure
+##### 3. Create Backup plan
+##### 4. Set up notifications
+##### 5. Test Restore
+##### 6. Clean up resources

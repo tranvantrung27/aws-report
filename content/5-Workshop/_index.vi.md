@@ -6,23 +6,19 @@ chapter: false
 pre: " <b> 5. </b> "
 ---
 
-# Đảm bảo truy cập Hybrid an toàn đến S3 bằng cách sử dụng VPC endpoint
+# IoT Weather Platform — Hướng dẫn triển khai chi tiết
 
 #### Tổng quan
 
-**AWS PrivateLink** cung cấp kết nối riêng tư đến các dịch vụ aws từ VPCs hoặc trung tâm dữ liệu (on-premise) mà không làm lộ lưu lượng truy cập ra ngoài public internet.
+**IoT Weather Platform** là nền tảng giám sát thời tiết thời gian thực được xây dựng trên kiến trúc AWS Serverless dành cho nhóm *ITea Lab*. Hệ thống thu thập dữ liệu từ các trạm thời tiết sử dụng Raspberry Pi + ESP32, xử lý và lưu trữ qua các dịch vụ AWS, đồng thời trực quan hóa thông qua dashboard web.
 
-Trong bài lab này, chúng ta sẽ học cách tạo, cấu hình, và kiểm tra VPC endpoints để cho phép workload của bạn tiếp cận các dịch vụ AWS mà không cần đi qua Internet công cộng.
-
-Chúng ta sẽ tạo hai loại endpoints để truy cập đến Amazon S3: gateway vpc endpoint và interface vpc endpoint. Hai loại vpc endpoints này mang đến nhiều lợi ích tùy thuộc vào việc bạn truy cập đến S3 từ môi trường cloud hay từ trung tâm dữ liệu (on-premise).
-+ **Gateway** - Tạo gateway endpoint để gửi lưu lượng đến Amazon S3 hoặc DynamoDB using private IP addresses. Bạn điều hướng lưu lượng từ VPC của bạn đến gateway endpoint bằng các bảng định tuyến (route tables)
-+ **Interface** - Tạo interface endpoint để gửi lưu lượng đến các dịch vụ điểm cuối (endpoints) sử dụng Network Load Balancer để phân phối lưu lượng. Lưu lượng dành cho dịch vụ điểm cuối được resolved bằng DNS.
+Trong phần này, chúng ta sẽ đi qua toàn bộ các bước triển khai hệ thống từ đầu đến cuối — từ cấu hình phần cứng biên, thiết lập hạ tầng AWS, đến giao diện web và kiểm thử.
 
 #### Nội dung
 
 1. [Tổng quan về workshop](5.1-Workshop-overview/)
-2. [Chuẩn bị](5.2-Prerequiste/)
-3. [Truy cập đến S3 từ VPC](5.3-S3-vpc/)
-4. [Truy cập đến S3 từ TTDL On-premises](5.4-S3-onprem/)
-5. [VPC Endpoint Policies (làm thêm)](5.5-Policy/)
+2. [Chuẩn bị môi trường](5.2-Prerequiste/)
+3. [Thiết lập AWS IoT Core & S3 Data Lake](5.3-S3-vpc/)
+4. [Xử lý dữ liệu với AWS Glue](5.4-S3-onprem/)
+5. [Triển khai Web Dashboard với Amplify](5.5-Policy/)
 6. [Dọn dẹp tài nguyên](5.6-Cleanup/)

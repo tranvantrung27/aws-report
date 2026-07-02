@@ -1,19 +1,31 @@
 ---
-title : "Giới thiệu"
-date : 2024-01-01 
+title : "Tổng quan về Workshop"
+date : 2026-04-26
 weight : 1
 chapter : false
 pre : " <b> 5.1. </b> "
 ---
 
-#### Giới thiệu về VPC Endpoint
+#### Tổng quan
 
-+ Điểm cuối VPC (endpoint) là thiết bị ảo. Chúng là các thành phần VPC có thể mở rộng theo chiều ngang, dự phòng và có tính sẵn sàng cao. Chúng cho phép giao tiếp giữa tài nguyên điện toán của bạn và dịch vụ AWS mà không gây ra rủi ro về tính sẵn sàng.
-+ Tài nguyên điện toán đang chạy trong VPC có thể truy cập Amazon S3 bằng cách sử dụng điểm cuối Gateway. Interface Endpoint  PrivateLink có thể được sử dụng bởi tài nguyên chạy trong VPC hoặc tại TTDL.
+**IoT Weather Platform** là hệ thống giám sát thời tiết thời gian thực, được xây dựng trên nền AWS Serverless dành cho nhóm nghiên cứu *ITea Lab* tại TP. Hồ Chí Minh.
 
-#### Tổng quan về workshop
-Trong workshop này, bạn sẽ sử dụng hai VPC.
-+ **"VPC Cloud"** dành cho các tài nguyên cloud như Gateway endpoint và EC2 instance để kiểm tra.
-+ **"VPC On-Prem"** mô phỏng môi trường truyền thống như nhà máy hoặc trung tâm dữ liệu của công ty. Một EC2 Instance chạy phần mềm StrongSwan VPN đã được triển khai trong "VPC On-prem" và được cấu hình tự động để thiết lập đường hầm VPN Site-to-Site với AWS Transit Gateway. VPN này mô phỏng kết nối từ một vị trí tại TTDL (on-prem) với AWS cloud. Để giảm thiểu chi phí, chỉ một phiên bản VPN được cung cấp để hỗ trợ workshop này. Khi lập kế hoạch kết nối VPN cho production workloads của bạn, AWS khuyên bạn nên sử dụng nhiều thiết bị VPN để có tính sẵn sàng cao.
+Hệ thống bao gồm hai phần chính:
+- **Edge Station**: Trạm thời tiết biên sử dụng Raspberry Pi + cảm biến ESP32 thu thập dữ liệu nhiệt độ, độ ẩm, lượng mưa, tốc độ gió và truyền về qua giao thức MQTT.
+- **Cloud Platform**: Hạ tầng AWS xử lý, lưu trữ và trực quan hóa dữ liệu thu thập được.
 
-![overview](/images/5-Workshop/5.1-Workshop-overview/diagram1.png)
+#### Kiến trúc hệ thống
+
+![IoT Weather Platform Architecture](/images/2-Proposal/platform_architecture.jpeg)
+
+#### Dịch vụ AWS sử dụng
+
+| Dịch vụ | Vai trò |
+| :--- | :--- |
+| **AWS IoT Core** | Tiếp nhận dữ liệu MQTT từ các trạm |
+| **AWS Lambda** | Xử lý dữ liệu và kích hoạt Glue jobs |
+| **Amazon API Gateway** | Giao tiếp với ứng dụng web |
+| **Amazon S3** | Lưu trữ thô (data lake) và dữ liệu đã xử lý |
+| **AWS Glue** | Crawlers + ETL jobs chuyển đổi dữ liệu |
+| **AWS Amplify** | Hosting giao diện web Next.js |
+| **Amazon Cognito** | Quản lý xác thực người dùng |

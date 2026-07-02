@@ -14,7 +14,7 @@ chapter: false
 
 &emsp; **Email:** trantrung04.contact@gmail.com
 
-&emsp; **University:** Ho Chi Minh City University of Technology
+&emsp; **University:** Ho Chi Minh City University of Technology(HUTECH)
 
 &emsp; **Major:** Information Technology
 

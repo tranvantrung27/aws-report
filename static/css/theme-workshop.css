@@ -47,11 +47,46 @@ select[multiple="multiple"]:focus {
   box-shadow: none;
 }
 
-h2,
-h3,
-h4,
-h5 {
-  color: var(--MAIN-TITLES-TEXT-color) !important;
+#body-inner h1 {
+  color: #162536 !important;
+  font-size: 2.2rem;
+  font-weight: 700;
+}
+
+#body-inner h2 {
+  color: #232f3e !important;
+  font-size: 1.7rem;
+  border-bottom: 2px solid #eaeded;
+  padding-bottom: 8px;
+  margin-top: 2.2rem;
+  margin-bottom: 1.2rem;
+  font-weight: 700;
+}
+
+#body-inner h3 {
+  color: #232f3e !important;
+  border-left: 4px solid #ff9900;
+  padding-left: 10px;
+  font-size: 1.4rem;
+  margin-top: 1.8rem;
+  margin-bottom: 1rem;
+  font-weight: 700;
+}
+
+#body-inner h4 {
+  color: #546e7a !important;
+  font-size: 1.15rem;
+  margin-top: 1.5rem;
+  margin-bottom: 0.8rem;
+  font-weight: 600;
+}
+
+#body-inner h5 {
+  color: #78909c !important;
+  font-size: 1rem;
+  margin-top: 1.2rem;
+  margin-bottom: 0.6rem;
+  font-weight: 600;
 }
 
 a {
@@ -179,7 +214,6 @@ h2,
 h3,
 h4,
 h5 {
-  color: var(--MAIN-TITLES-TEXT-color) !important;
   font-family: "Amazon Ember", "Montserrat", sans-serif;
 }
 

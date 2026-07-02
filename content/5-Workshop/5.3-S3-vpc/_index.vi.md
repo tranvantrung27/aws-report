@@ -1,18 +1,23 @@
 ---
-title : "Truy cập S3 từ VPC"
-date : 2024-01-01 
+title : "Thiết lập AWS IoT Core & S3 Data Lake"
+date : 2026-04-26
 weight : 3
 chapter : false
 pre : " <b> 5.3. </b> "
 ---
 
-#### Sử dụng Gateway endpoint
+#### Mục tiêu
 
-Trong phần này, bạn sẽ tạo một Gateway endpoint để truy cập Amazon S3 từ một EC2 instance. Gateway endpoint sẽ cho phép tải một object lên S3 bucket mà không cần sử dụng Internet Công cộng. Để tạo endpoint, bạn phải chỉ định VPC mà bạn muốn tạo endpoint và dịch vụ (trong trường hợp này là S3) mà bạn muốn thiết lập kết nối.
+Trong phần này, chúng ta sẽ thiết lập luồng dữ liệu từ các trạm thời tiết vào AWS:
+- Cấu hình **AWS IoT Core** để tiếp nhận dữ liệu MQTT từ Raspberry Pi
+- Tạo **IoT Rules** để tự động đẩy dữ liệu vào S3
+- Thiết lập **S3 Data Lake** (bucket lưu trữ dữ liệu thô)
 
-![overview](/images/5-Workshop/5.3-S3-vpc/diagram2.png)
+{{% notice info "Information" %}}
+Nội dung chi tiết từng bước thực hiện sẽ được cập nhật khi triển khai thực tế.
+{{% /notice %}}
 
 #### Nội dung
 
-- [Tạo gateway endpoint](3.1-create-gwe/)
-- [Test gateway endpoint](3.2-test-gwe/)
+1. [Tạo IoT Core Thing & Certificate](5.3.1-create-gwe/)
+2. [Kiểm tra kết nối MQTT](5.3.2-test-gwe/)
