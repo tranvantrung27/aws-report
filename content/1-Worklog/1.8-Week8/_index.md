@@ -30,17 +30,103 @@ pre: " <b> 1.8. </b> "
 
 #### Lab 1: VM Import/Export (Lab 14)
 ##### 1. Prepare VM
+* Installed virtualization software **VMware Workstation Pro** in the local environment.
+* Created a new **Ubuntu Desktop** virtual machine with a single-file virtual disk of **20 GB**.
+* Enabled SSH server access on the VM for remote administration:
+```bash
+sudo apt update
+sudo apt install openssh-server -y
+sudo systemctl enable ssh --now
+```
+
 ##### 2. Import VM into AWS
 ###### 2.1 Export VM from On-premise
+* Powered off the virtual machine in VMware Workstation.
+* Clicked **File** -> **Export to OVF...**
+* Generated a virtual disk image file with the **`.vmdk`** extension (e.g. `Ubuntu-disk1.vmdk`).
+
 ###### 2.2 Upload VM to AWS
+* Created a globally unique S3 Bucket `vm-import-export-bucket-trung-2026` with **ACLs enabled** and Block Public Access turned off.
+* Uploaded the `Ubuntu-disk1.vmdk` file into the bucket.
+* Verified the bucket configurations on the console:
+
+![S3 ACL Enabled](/images/worklog/week-8/1_s3_acl_enabled.png)
+
 ###### 2.3 Import VM into AWS
+* Configured a service role named `vmimport` to authorize the import service.
+* Created the trust relationship file `trust-policy.json`:
+```json
+{
+   "Version": "2012-10-17",
+   "Statement": [
+      {
+         "Effect": "Allow",
+         "Principal": { "Service": "vmie.amazonaws.com" },
+         "Action": "sts:AssumeRole",
+         "Condition": { "StringEquals": { "sts:ExternalId": "vmimport" } }
+      }
+   ]
+}
+```
+* Created the IAM Role:
+```bash
+aws iam create-role --role-name vmimport --assume-role-policy-document "file://trust-policy.json"
+```
+* Configured S3 and EC2 policy permissions for the role `role-policy.json`:
+```bash
+aws iam put-role-policy --role-name vmimport --policy-name vmimport-policy --policy-document "file://role-policy.json"
+```
+* Verified `vmimport` role creation with correct Trusted Entity in IAM Console:
+
+![IAM Role vmimport](/images/worklog/week-8/1_iam_role_vmimport.png)
+
+* Created `containers.json` config and initiated the image import process via CLI:
+```bash
+aws ec2 import-image --description "Ubuntu App Server Import" --disk-containers "file://containers.json"
+```
+* Monitored the image import task to track progress until AMI generation:
+```bash
+aws ec2 describe-import-image-tasks --import-task-ids <ImportTaskId>
+```
+
 ###### 2.4 Deploy EC2 Instance from AMI
+* Located the imported AMI under EC2 Console > **AMIs**.
+* Selected **Launch instance from AMI** to launch a `t3.micro` instance named `Import-Server` (configured with SSH port 22).
+* SSHed into the instance from the local machine:
+```bash
+ssh awsstudent@<Public_IP_EC2>
+```
+
 ##### 3. Export EC2 Instance from AWS
 ###### 3.1 Set up ACL for S3 Bucket
+* Authorized the VM Import/Export service to write output files back to S3 by adding writing permissions to its Canonical ID:
+```bash
+aws s3api put-bucket-acl --bucket YOUR_BUCKET_NAME --grant-write "id=c4d8eabf8db69dbe46bfe0e517100c554f01200b104d59cd408e777ba442a322" --grant-read-acp "id=c4d8eabf8db69dbe46bfe0e517100c554f01200b104d59cd408e777ba442a322"
+```
+
 ###### 3.2 Export VM from EC2 Instance
+* Initiated instance export task back to S3 as a `.ova` package:
+```bash
+aws ec2 create-instance-export-task --instance-id <InstanceId> --target-environment vmware --export-to-s3-task DiskImageFormat=vmdk,ContainerFormat=ova,S3Bucket=YOUR_BUCKET_NAME,S3Prefix=exports/
+```
+
 ###### 3.3 Export VM from AMI
+* Executed image export task directly from the AMI:
+```bash
+aws ec2 export-image --image-id <AMI_ID> --disk-image-format VMDK --s3-export-location S3Bucket=YOUR_BUCKET_NAME,S3Prefix=exports/
+```
+
 ##### 4. Reference Video
+* Watched reference video demonstrations on vm import/export to grasp workflow patterns.
+
 ##### 5. Resource Cleanup
+Cleaned up resources to prevent charges:
+```bash
+aws ec2 terminate-instances --instance-ids <InstanceId>
+aws ec2 deregister-image --image-id <AMI_ID>
+aws s3 rb s3://vm-import-export-bucket-trung-2026/ --force
+aws iam delete-role --role-name vmimport
+```
 
 ---
 
