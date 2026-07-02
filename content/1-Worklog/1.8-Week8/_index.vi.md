@@ -132,30 +132,163 @@ aws iam delete-role --role-name vmimport
 
 #### Lab 2: Deploy App with Docker / Docker Compose / RDS / ECR (Lab 15)
 ##### 1. Giới thiệu (Introduction)
+Lab 15 hướng dẫn quá trình đóng gói một ứng dụng Fullstack (sử dụng React Frontend, Express Backend và MySQL Database) bằng Docker container, chạy tự động hóa trên EC2 thông qua Docker Compose, tích hợp lưu trữ dữ liệu tại Amazon RDS và lưu trữ ảnh container (Images) tại AWS ECR và Docker Hub.
+
 ##### 2. Triển khai trên Local (Deploy Local)
 ###### 2.1. Cài đặt Dependencies
+Cài đặt các công cụ yêu cầu ở local bao gồm Git, Node.js & NPM, và MySQL Server:
+```bash
+git --version
+node -v
+npm -v
+mysql --version
+```
+
 ###### 2.2. Triển khai ứng dụng
+* Tải mã nguồn ứng dụng mẫu:
+```bash
+git clone https://github.com/AWS-First-Cloud-Journey/aws-fcj-container-app.git
+cd aws-fcj-container-app
+```
+* Khởi tạo cơ sở dữ liệu local bằng cách import tệp `/database/init.sql` vào MySQL local.
+* Tạo tệp cấu hình môi trường `.env` trong thư mục `/backend`:
+```env
+PORT=5000
+DB_HOST=localhost
+DB_USER=root
+DB_PASSWORD=your_password
+DB_NAME=fcjresbar
+```
+* Cài đặt thư viện và khởi động backend:
+```bash
+cd backend && npm install && npm run dev
+```
+* Cài đặt thư viện và khởi động frontend:
+```bash
+cd ../frontend && npm install && npm start
+```
+
 ###### 2.3. Kiểm tra ứng dụng
+* Truy cập `http://localhost:3000` trên trình duyệt để kiểm thử hoạt động của ứng dụng.
+
 ##### 3. Chuẩn bị (Preparation)
 ###### 3.1. Cấu hình VPC
+* Khởi tạo mạng VPC `FCJ-Lab-vpc` với CIDR `10.0.0.0/16`.
+* Tạo 1 Public Subnet (`10.0.1.0/24`) phục vụ cho EC2 Web Server và 2 Private Subnets (`10.0.2.0/24`, `10.0.3.0/24`) tại 2 Availability Zones khác nhau phục vụ cho RDS.
+* Khởi tạo Internet Gateway và liên kết Route Table cho phép Public Subnet kết nối Internet.
+
 ###### 3.2. Cấu hình Security Group
+Tạo 2 nhóm bảo mật Security Groups bao gồm:
+* `FCJ-Lab-sg-public` (EC2 host): Cho phép truy cập cổng 22 (SSH), 80 (HTTP), 3000 (Frontend) và 5000 (Backend) từ bất kỳ đâu (`0.0.0.0/0`).
+* `FCJ-Lab-sg-private` (RDS DB): Chỉ chấp nhận kết nối cơ sở dữ liệu trên cổng 3306 đi đến từ `FCJ-Lab-sg-public`.
+
 ###### 3.3. Tạo IAM Roles để truy cập vào ECR
+* Khởi tạo IAM Role `CustomRWECRRole` tin cậy dịch vụ EC2 (`ec2.amazonaws.com`).
+* Gán các policy cho phép EC2 ghi và đọc dữ liệu từ AWS ECR Registry (`ReadECRRepositoryContent` và `WriteECRRepositoryContent`):
+* Minh chứng khởi tạo thành công IAM Role:
+
+![IAM Role for ECR](/images/worklog/week-8/2_iam_role_ecr.png)
+
 ###### 3.4. Đăng nhập vào Docker Hub
+* Đăng ký tài khoản Docker Hub phục vụ lưu trữ public image.
+
 ##### 4. Khởi chạy RDS Instance (Launch RDS Instance)
 ###### 4.1. Tạo DB Subnet Group
+* Tạo DB Subnet Group `fcj-lab-subnet-group-db` gắn liền với 2 Subnets Private trong VPC của lab:
+* Minh chứng cấu hình Subnet Group:
+
+![DB Subnet Group](/images/worklog/week-8/2_rds_subnet_group.png)
+
 ###### 4.2. Khởi chạy RDS Instance
+* Triển khai một DB Instance MySQL `fcj-lab-rds-instance` với kích thước `db.t3.micro`, sử dụng DB Subnet Group vừa tạo và gán nhóm bảo mật Private `FCJ-Lab-sg-private`.
+* Minh chứng cơ sở dữ liệu đang trong quá trình khởi tạo trên RDS Console:
+
+![RDS Instance Creating](/images/worklog/week-8/2_rds_creating.png)
+
 ##### 5. Cấu hình EC2 Instance (Configure EC2 Instance)
 ###### 5.1. Cấu hình EC2 Instance
+* Khởi tạo máy chủ EC2 `FCJ-Lab-my-server` chạy Ubuntu Server, thuộc Public Subnet và được gán IAM Profile `CustomRWECRRole`.
+
 ###### 5.2. Cài đặt các thư viện yêu cầu
+SSH vào EC2 và tiến hành cài đặt Docker Engine, Unzip, MySQL Client và AWS CLI v2:
+```bash
+sudo apt update
+sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin mysql-client unzip
+```
+
 ###### 5.3. Thêm cơ sở dữ liệu để thử nghiệm
+* Đăng nhập từ EC2 vào RDS qua Endpoint:
+```bash
+mysql -h <RDS_ENDPOINT> -u admin -p
+```
+* Thực thi tệp script SQL để tạo cấu trúc cơ sở dữ liệu:
+```sql
+source aws-fcj-container-app/database/init.sql;
+```
+
 ##### 6. Triển khai trên Docker Image (Deploy with Docker Image)
 ###### 6.1. Triển khai Application
+* Tạo một mạng ảo Docker Bridge:
+```bash
+sudo docker network create my-network
+```
+* Build và chạy Container Backend:
+```bash
+cd backend && sudo docker build . -t backend-image
+sudo docker run -d -p 5000:5000 --network my-network --name backend backend-image
+```
+* Build và chạy Container Frontend:
+```bash
+cd ../frontend && sudo docker build . -t frontend-image
+sudo docker run -d -p 3000:80 --network my-network --name frontend frontend-image
+```
+
 ###### 6.2. Kiểm tra Application
+* Truy cập `http://<EC2_PUBLIC_IP>:3000` để xác minh frontend lấy dữ liệu thành công từ database RDS thông qua API Backend.
+
 ##### 7. Triển khai với Docker Compose (Deploy with Docker Compose)
 ###### 7.1. Triển khai Application
+* Gỡ bỏ các container chạy riêng lẻ cũ.
+* Chạy tệp cấu hình Docker Compose `docker-compose.app.yml` để tự động hóa tiến trình build và cấu hình liên kết mạng giữa các container:
+```bash
+sudo docker compose -f docker-compose.app.yml up -d
+```
+
 ###### 7.2. Kiểm tra Application
+* Kiểm tra danh sách container hoạt động:
+```bash
+sudo docker compose -f docker-compose.app.yml ps
+```
+
 ##### 8. Push Image (Push Image)
 ###### 8.1. Sử dụng ECR
+* Tạo 2 repositories `fcjresbar-fe` và `fcjresbar-be` trên Amazon ECR.
+* Xác thực AWS CLI với ECR Registry:
+```bash
+aws ecr get-login-password --region ap-southeast-1 | sudo docker login --username AWS --password-stdin <AWS_ACCOUNT_ID>.dkr.ecr.ap-southeast-1.amazonaws.com
+```
+* Tag và push Docker image lên ECR:
+```bash
+sudo docker tag backend-image:latest <AWS_ACCOUNT_ID>.dkr.ecr.ap-southeast-1.amazonaws.com/fcjresbar-be:latest
+sudo docker push <AWS_ACCOUNT_ID>.dkr.ecr.ap-southeast-1.amazonaws.com/fcjresbar-be:latest
+```
+
 ###### 8.2. Sử dụng Docker Hub
+* Đăng nhập tài khoản Docker Hub trên EC2 và thực hiện đẩy Image lên:
+```bash
+sudo docker login
+sudo docker tag backend-image:latest <DOCKER_HUB_USERNAME>/fcjresbar-be:latest
+sudo docker push <DOCKER_HUB_USERNAME>/fcjresbar-be:latest
+```
+
 ##### 9. Dọn Dẹp Tài Nguyên (Resource Cleanup)
+Để tránh phát sinh chi phí, thực hiện dọn dẹp sạch toàn bộ tài nguyên:
+```bash
+aws rds delete-db-instance --db-instance-identifier "fcj-lab-rds-instance" --skip-final-snapshot
+aws rds delete-db-subnet-group --db-subnet-group-name "fcj-lab-subnet-group-db"
+aws ec2 terminate-instances --instance-ids <InstanceId>
+aws ec2 delete-security-group --group-id <PublicSGID>
+aws ec2 delete-security-group --group-id <PrivateSGID>
+aws ec2 delete-vpc --vpc-id <VpcId>
+```
 
