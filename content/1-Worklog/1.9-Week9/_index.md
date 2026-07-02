@@ -211,27 +211,50 @@ This lab focuses on automating the delivery lifecycle of our containerized appli
 ##### 3. CI/CD Deployment with GitLab
 
 ###### 3.1. Fork and Modify Repository
-Fork the template repository to your GitLab account. Update the `.gitlab-ci.yml` file to reflect your AWS details.
+* Forked the template repository `fcj-lab/aws-fcj-container-app` to personal GitLab account.
+* Modified `frontend/src/components/Menu.jsx` file, changing `"Dashboard"` to `"Dashboard v1.0.1"`.
 
 ###### 3.2. Install and Register GitLab Runner
-Provision an EC2 instance, install the GitLab Runner package, and register the runner with the GitLab project:
+Launched an EC2 Instance running Ubuntu Server and executed setup runner scripts:
 ```bash
-sudo gitlab-runner register \
-  --non-interactive \
-  --url "https://gitlab.com/" \
-  --registration-token "<project_token>" \
-  --executor "shell" \
-  --description "AWS-ECS-Runner"
+# setup.sh
+apt update -y
+curl -L "https://packages.gitlab.com/install/repositories/runner/gitlab-runner/script.deb.sh" | sudo bash
+apt install gitlab-runner -y
+gitlab-runner --version
+```
+* Switched to `gitlab-runner` system user:
+```bash
+sudo -i
+su gitlab-runner
+cd
+```
+* Registered the runner instance with GitLab project:
+```bash
+gitlab-runner register --url https://gitlab.com --token <YOUR_REGISTRATION_TOKEN>
+```
+* Selected `shell` executor and run the runner daemon in background:
+```bash
+nohup gitlab-runner run > start-runner-be.txt 2>&1 &
 ```
 
 ###### 3.3. Configure Permissions and IAM Role
-Attach an IAM Role to the EC2 instance hosting GitLab Runner containing ECR access policies (`AmazonEC2ContainerRegistryPowerUser`) and ECS deployment permissions, avoiding raw access keys inside the pipeline.
+* Configured passwordless sudo privileges for the runner inside `/etc/sudoers` via `sudo visudo`:
+```text
+gitlab-runner ALL=(ALL) NOPASSWD:ALL
+```
+* Provisioned IAM Role `ECS-GitLabRunner-Role` and attached it as the instance profile to allow ECR and ECS updates.
+* Verified IAM Role configuration on the console:
 
-###### 3.4. Add Variables and Run Pipeline
-Define environment variables (`AWS_DEFAULT_REGION`, `AWS_ACCOUNT_ID`) in GitLab Project Settings -> CI/CD -> Variables. Commit changes to trigger the pipeline automatically.
+![IAM Role Runner](/images/worklog/week-9/1_iam_role_gitlab_runner.png)
 
-###### 3.5. Check Results
-Examine the GitLab pipeline page to ensure all jobs (Build, Test, Deploy) complete successfully. Verify that the ECS service deploys the newly built image.
+###### 3.4. Configure Variables and Run Pipeline
+* Set up CI/CD variables in GitLab settings: `CLUSTER_NAME`, `SERVICE_NAME_FE`, `SERVICE_NAME_BE`, `REGION`, `AWS_APPLICATION_NAME`, `AWS_DEPLOYMENT_GROUP_NAME`, `ACCOUNT_NUMBER`.
+* Configured `.gitlab-ci.yml` pipeline file separating build, push, and deploy stages.
+
+###### 3.5. Pipeline Execution Results
+* Created and pushed a Git Tag. Monitored pipeline execution success in the GitLab CI/CD interface.
+* Confirmed ECS task definition updated and the new version of frontend loaded successfully.
 
 ##### 4. CI/CD Deployment with GitHub Actions
 
@@ -275,19 +298,22 @@ Enable **CloudWatch Container Insights** on the ECS cluster `ECS-App-Cluster`. M
 Create a custom CloudWatch Dashboard for visual metrics tracing.
 
 ##### 7. Logs Router with Firelens
-AWS Firelens allows us to forward container logs to storage destinations using Fluent Bit sidecars.
+AWS Firelens integrates Fluent Bit routing to direct container logs to third-party endpoints or AWS destinations.
 
-###### 7.1. Create S3 Bucket to store logs
-Provision an S3 bucket (e.g., `ecs-app-logs-bucket`) to hold historical logs.
+###### 7.1. Create Amazon S3 Bucket for Logs Storage
+* Provisioned S3 bucket `fcj-firelens-logs-trung-2026` to store container standard output logs.
+* Verified S3 bucket creation on the console:
+
+![S3 logs bucket](/images/worklog/week-9/1_s3_firelens_logs.png)
 
 ###### 7.2. Create IAM Role for ECS Task
-Attach permissions to the ECS Task Role allowing `s3:PutObject` calls on the log bucket.
+* Created task role `ECSTaskFullAccessToS3Role` with policy permission `AmazonS3FullAccess`.
 
-###### 7.3. Update ECS Service
-Add a sidecar container named `log_router` running the AWS Fluent Bit image to the Task Definition. Configure the main container's `logConfiguration` driver to `awsfirelens` to stream logs directly to S3.
+###### 7.3. Configure Firelens in Task Definition
+* Configured log router sidecar container `amazon/aws-for-fluent-bit:stable` and modified main container `logConfiguration` driver to `awsfirelens`, targeting the S3 destination parameters.
 
-###### 7.4. Check logs
-Browse the S3 bucket to verify that log directories are automatically created and log events are captured.
+###### 7.4. Verify Log Delivery
+* Verified S3 log delivery directories are created automatically inside the destination bucket.
 
 ##### 8. Clean up resources
 Delete CodeBuild projects, terminate GitLab Runner EC2 instances, empty and delete the logs S3 bucket, and disable Container Insights.
