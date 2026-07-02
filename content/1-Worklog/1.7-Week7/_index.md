@@ -176,14 +176,84 @@ aws iam delete-group --group-name "dev"
 #### Lab 2: AWS Organizations & IAM Identity Center (Lab 12)
 ##### 1. Preparation steps
 ###### 1.1 Create AWS Account in AWS Organizations
+* Access the **AWS Organizations** console using the Management account.
+* Select **Add an AWS account** > **Create an AWS account**.
+* Provide a name for the member account (e.g., `production-account`) and the owner's email address (AWS supports the `email+alias@domain.com` format to manage multiple member accounts under a single primary email).
+* Retain the default IAM role name `OrganizationAccountAccessRole` to facilitate switching roles from the Management account later.
+
 ###### 1.2 Setting up the Organization Unit
+* In the AWS Organizations interface, select the **Root** container.
+* Click **Actions** and select **Create new** under Organizational Unit.
+* Create Organizational Units to structure the accounts logically:
+  * **Security**
+  * **Shared Services**
+  * **Logging**
+  * **Application**
+* Select the member accounts and click **Move** to place them inside the appropriate OUs to organize and isolate permissions.
+
 ###### 1.3 Invite AWS Account to AWS Organization
+* From the Management account, click **Invite AWS account** and enter the Account ID or Email address of an existing independent AWS account.
+* Log into the invited member account, navigate to the AWS Organizations console, and click **Accept Invitation**.
+
 ###### 1.4 Access member account in Organization
+* From the Management account console, select **Switch role** at the top right dropdown.
+* Enter the member account's **Account ID** and the Role Name `OrganizationAccountAccessRole` to log in directly without credentials.
+
 ##### 2. AWS CLI
+* Configure AWS CLI integration with IAM Identity Center (SSO):
+```bash
+aws configure sso
+```
+* The CLI initiates browser-based OIDC device authorization, allowing authentication via the SSO portal to generate temporary access credentials.
+
 ##### 3. Time-based access control
+* Implement temporary access control by specifying conditions using the global condition key `aws:CurrentTime` in the IAM Identity Center Permission Sets.
+* Write Inline Policies using ISO 8601 (UTC) format for date conditions to enforce specific access time slots.
+* Example policy denying EC2 instance termination outside a specified date window:
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "TimeBasedEC2Access",
+      "Effect": "Deny",
+      "Action": "ec2:TerminateInstances",
+      "Resource": "*",
+      "Condition": {
+        "DateGreaterThan": { "aws:CurrentTime": "2026-01-25T00:00:00Z" },
+        "DateLessThan": { "aws:CurrentTime": "2026-01-27T23:59:59Z" }
+      }
+    }
+  ]
+}
+```
+
 ##### 4. Customer Managed Policies
+* Permission Sets in IAM Identity Center can reference existing **Customer Managed Policies** stored locally on member accounts.
+* **Rule:** The name of the policy in the member account must match the policy name referenced in the Permission Set exactly (case-sensitive). This allows policy definition parameters to vary across accounts while maintaining a unified identity management structure.
+
 ##### 5. IAM Identity Center Identity Store APIs
+* Automate user and group lifecycle management using programmatic scripts utilizing the AWS Identity Store APIs (Boto3 library).
+* Retrieve the **Identity store ID** (e.g., `d-xxxxxxxxxx`) from the IAM Identity Center console and run administrative actions:
+```bash
+# View help and parameters
+python identitystore_operations.py -h
+
+# Create a new group
+python identitystore_operations.py create_group --identitystoreid d-123456a7890 --groupname AWS_Data_Science --description "Data Science group"
+
+# Create a user and add directly to the group
+python identitystore_operations.py create_user --identitystoreid d-123456a7890 --username johndoe --givenname John --familyname Doe --groupname AWS_Data_Science
+```
+
 ##### 6. Resource Cleanup
+* Clean up configurations by going to **IAM Identity Center** > **Settings** > **Management** tab and choosing **Delete IAM Identity Center configuration**. Confirm by entering the instance ID.
+* Delete all test CloudFormation stacks deployed on the member accounts.
+
+* Evidence of IAM Identity Center Dashboard:
+
+![IAM Identity Center Dashboard](/images/worklog/week-7/2_iam_identity_center.png)
+
 
 ---
 

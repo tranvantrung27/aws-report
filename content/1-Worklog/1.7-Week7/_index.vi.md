@@ -178,14 +178,84 @@ aws iam delete-group --group-name "dev"
 #### Lab 2: AWS Organizations & IAM Identity Center (Lab 12)
 ##### 1. Các bước chuẩn bị (Preparation steps)
 ###### 1.1 Tạo AWS Account trong AWS Organizations
+* Truy cập **AWS Organizations** console thông qua tài khoản chính (Management account).
+* Chọn **Add an AWS account** > **Create an AWS account**.
+* Đặt tên cho tài khoản thành viên (member account) ví dụ: `production-account` và nhập địa chỉ Email của chủ sở hữu (AWS hỗ trợ sử dụng định dạng `email+alias@domain.com` để quản lý nhiều tài khoản phụ bằng cùng một hòm thư chính).
+* Chỉ định IAM role mặc định có tên `OrganizationAccountAccessRole` để phục vụ cho việc Switch Role từ tài khoản Management.
+
 ###### 1.2 Thiết lập Organizational Unit (OU)
+* Trong giao diện AWS Organizations, lựa chọn thư mục gốc **Root**.
+* Nhấn **Actions** và chọn **Create new** dưới mục Organizational Unit.
+* Tạo các Organizational Units đại diện cho cấu trúc doanh nghiệp:
+  * **Security** (Nhóm bảo mật)
+  * **Shared Services** (Các dịch vụ dùng chung)
+  * **Logging** (Tập trung log)
+  * **Application** (Chứa các tài khoản chạy ứng dụng)
+* Chọn các tài khoản phụ tương ứng và nhấp **Move** để chuyển chúng vào đúng các nhóm OU này nhằm phân tách chức năng và áp dụng chính sách quản lý SCPs sau này.
+
 ###### 1.3 Mời AWS Account vào AWS Organization
+* Từ tài khoản quản lý, nhấn nút **Invite AWS account** để gửi thư mời tới một tài khoản độc lập đã tồn tại trước đó bằng cách điền AWS Account ID hoặc Email của tài khoản đó.
+* Đăng nhập vào tài khoản được mời, điều hướng đến AWS Organizations console và nhấn **Accept Invitation**.
+
 ###### 1.4 Truy cập member account trong Organization
+* Trên tài khoản Management, chọn **Switch role** ở góc phải màn hình.
+* Nhập **Account ID** của member account và Role Name là `OrganizationAccountAccessRole` để truy cập trực tiếp vào member account mà không cần nhập thông tin đăng nhập riêng.
+
 ##### 2. AWS CLI
+* Cấu hình AWS CLI tích hợp Single Sign-On (SSO) sử dụng IAM Identity Center:
+```bash
+aws configure sso
+```
+* CLI tự động tạo cổng xác thực OIDC trên trình duyệt, cho phép người dùng đăng nhập bằng tài khoản SSO và sinh ra thông tin đăng nhập tạm thời, loại bỏ nguy cơ lộ lọt AWS Access Key dài hạn.
+
 ##### 3. Kiểm soát truy cập dựa trên thời gian (Time-based access control)
+* Thiết lập cơ chế kiểm soát truy cập tạm thời bằng cách đính kèm khóa điều kiện thời gian thực `aws:CurrentTime` vào Permission Set trong IAM Identity Center.
+* Sử dụng chính sách Inline Policy từ chối/cho phép thực hiện tác vụ trong một khung giờ cố định sử dụng toán tử định dạng ISO 8601 (UTC).
+* Ví dụ chính sách chỉ cho phép hủy máy chủ EC2 trong khoảng thời gian quy định (từ ngày 25/01/2026 đến 27/01/2026):
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "TimeBasedEC2Access",
+      "Effect": "Deny",
+      "Action": "ec2:TerminateInstances",
+      "Resource": "*",
+      "Condition": {
+        "DateGreaterThan": { "aws:CurrentTime": "2026-01-25T00:00:00Z" },
+        "DateLessThan": { "aws:CurrentTime": "2026-01-27T23:59:59Z" }
+      }
+    }
+  ]
+}
+```
+
 ##### 4. Customer Managed Policies
+* permission set trong IAM Identity Center cho phép liên kết trực tiếp với các chính sách IAM cục bộ (**Customer Managed Policies**) nằm trên tài khoản thành viên.
+* **Quy tắc:** Tên chính sách IAM tại tài khoản thành viên phải khớp chính xác từng chữ cái (case-sensitive) với cấu hình khai báo ở Permission Set. Điều này giúp đồng nhất về mặt quản trị cấu trúc nhưng vẫn cho phép nội dung chính sách tùy biến theo tài nguyên đặc thù của từng tài khoản.
+
 ##### 5. IAM Identity Center Identity Store APIs
+* Quản trị tự động bằng lập trình thay vì thao tác Console bằng cách sử dụng kịch bản Python tương tác với AWS Identity Store APIs (thư viện Boto3).
+* Lấy **Identity store ID** (dạng `d-xxxxxxxxxx`) từ phần cấu hình IAM Identity Center và thực hiện các câu lệnh quản trị:
+```bash
+# Xem các thao tác được hỗ trợ
+python identitystore_operations.py -h
+
+# Tạo một group mới đại diện cho nhóm khoa học dữ liệu
+python identitystore_operations.py create_group --identitystoreid d-123456a7890 --groupname AWS_Data_Science --description "Data Science group"
+
+# Tạo một User mới và thêm trực tiếp vào nhóm vừa tạo
+python identitystore_operations.py create_user --identitystoreid d-123456a7890 --username johndoe --givenname John --familyname Doe --groupname AWS_Data_Science
+```
+
 ##### 6. Dọn dẹp tài nguyên (Resource Cleanup)
+* Đảm bảo xóa sạch cấu hình thử nghiệm bằng cách truy cập **IAM Identity Center** > **Settings** > tab **Management** và tiến hành chọn **Delete IAM Identity Center configuration** bằng cách nhập ID để xác nhận xóa.
+* Xóa toàn bộ các CloudFormation stacks liên quan tại các tài khoản thành viên.
+
+* Minh chứng giao diện quản lý IAM Identity Center:
+
+![IAM Identity Center Dashboard](/images/worklog/week-7/2_iam_identity_center.png)
+
 
 ---
 
