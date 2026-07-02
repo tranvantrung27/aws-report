@@ -227,7 +227,7 @@ Tối ưu hóa chi phí (Cost Optimization) là một trụ cột cốt lõi tro
 Để tích hợp gửi tin nhắn từ AWS Lambda về Slack:
 1. Đăng nhập vào Slack và cấu hình tính năng Incoming WebHook.
 2. Tạo channel `#notification` nhận tin nhắn.
-3. Cài đặt Webhook và sao chép đường dẫn Webhook URL có cấu trúc dạng: `https://hooks.slack.com/services/TXXXXX/BXXXXX/XXXXXXXXXX`.
+3. Cài đặt Webhook và sao chép đường dẫn Webhook URL có cấu trúc dạng: `https://hooks.slack.com/services/T_WORKSPACE/B_CHANNEL/WEBHOOK_TOKEN_STRING`.
 
 ##### 3. Tạo IAM Role cho Lambda Function
 Lambda cần được cấp quyền hạn từ IAM Role để có thể thao tác dừng/bật các EC2 instance và tạo Log trên CloudWatch.
@@ -258,7 +258,7 @@ import urllib3
 
 ec2_resource = boto3.resource('ec2')
 http = urllib3.PoolManager()
-webhook_url = "https://hooks.slack.com/services/TXXXXX/BXXXXX/XXXXXXXXXX" # Thay bằng URL của bạn
+webhook_url = "https://hooks.slack.com/services/T_WORKSPACE/B_CHANNEL/WEBHOOK_TOKEN_STRING"
 
 def lambda_handler(event, context):
     environment_auto = os.environ.get('environment_auto')

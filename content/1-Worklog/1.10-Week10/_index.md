@@ -231,7 +231,7 @@ Cost Optimization is a key pillar of the AWS Well-Architected Framework. In prac
 To send notifications from AWS Lambda to Slack:
 1. Log into Slack and navigate to Incoming Webhooks configuration.
 2. Create a channel named `#notification` to receive alerts.
-3. Enable the Webhook and copy the URL (format: `https://hooks.slack.com/services/TXXXXX/BXXXXX/XXXXXXXXXX`).
+3. Enable the Webhook and copy the URL (format: `https://hooks.slack.com/services/T_WORKSPACE/B_CHANNEL/WEBHOOK_TOKEN_STRING`).
 
 ##### 3. Create IAM Role for Lambda Function
 Lambda needs IAM permissions to describe, start, and stop EC2 instances, and write Execution logs to CloudWatch Logs.
@@ -262,7 +262,7 @@ import urllib3
 
 ec2_resource = boto3.resource('ec2')
 http = urllib3.PoolManager()
-webhook_url = "https://hooks.slack.com/services/TXXXXX/BXXXXX/XXXXXXXXXX" # Replace with your webhook
+webhook_url = "https://hooks.slack.com/services/T_WORKSPACE/B_CHANNEL/WEBHOOK_TOKEN_STRING"
 
 def lambda_handler(event, context):
     environment_auto = os.environ.get('environment_auto')
