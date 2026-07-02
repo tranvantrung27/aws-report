@@ -58,7 +58,26 @@ pre: " <b> 1.6. </b> "
 
 ![CloudWatch Dashboard](/images/worklog/week-6/6.5.png)
 
-#### 2. Hybrid DNS – Route 53 Resolver Workshop
+#### 2. AWS Support Overview
+
+##### **AWS Support Plans**
+* Studied the 5 AWS Support plans in order from basic to advanced:
+  * **Basic** – Free; covers account and billing questions only.
+  * **Developer** – Technical support via email during business hours.
+  * **Business** – 24/7 phone, chat, and email support; 1-hour SLA for urgent issues.
+  * **Enterprise On-Ramp** – Shared Technical Account Manager (TAM) access.
+  * **Enterprise** – Dedicated TAM; 15-minute SLA for business-critical system down.
+* Accessed the **AWS Support Console** and explored the Support Case management interface.
+* Reviewed and updated the current support plan.
+
+##### **Creating a Support Case**
+* Created new Support Cases of both types: **Account & Billing** (billing and account issues) and **Technical** (technical issues with AWS services).
+* Selected appropriate **Severity** levels: General guidance, System impaired, Production system impaired, Production system down, Business/Mission critical system down.
+* Monitored Support Case status and managed responses from the AWS Support team.
+
+#### 3. Hybrid DNS – Route 53 Resolver Workshop
+
+
 
 ##### **2.1 Generate Key Pair**
 * Created Key Pair `hybrid-DNS` (RSA, `.pem` format) used to decrypt the Administrator password for connecting to the RDGW instance.

@@ -58,7 +58,26 @@ pre: " <b> 1.6. </b> "
 
 ![Thiết lập Dashboard](/images/worklog/week-6/6.5.png)
 
-#### 2. Thực hành với Hybrid DNS – Route 53 Resolver
+#### 2. Tìm hiểu AWS Support
+
+##### **Các gói hỗ trợ của AWS**
+* Nghiên cứu 5 gói hỗ trợ của AWS theo thứ tự từ cơ bản đến nâng cao:
+  * **Basic** – Miễn phí, chỉ hỗ trợ tài khoản và thanh toán.
+  * **Developer** – Hỗ trợ kỹ thuật qua email (giờ hành chính).
+  * **Business** – Hỗ trợ 24/7 qua phone, chat, email; SLA phản hồi 1 giờ.
+  * **Enterprise On-Ramp** – Có Technical Account Manager (TAM) theo nhóm.
+  * **Enterprise** – TAM chuyên biệt, SLA phản hồi 15 phút cho critical.
+* Truy cập **AWS Support Console** và tìm hiểu giao diện quản lý Support Cases.
+* Thực hiện xem xét và thay đổi gói hỗ trợ hiện tại.
+
+##### **Khởi tạo Support Case**
+* Tạo Support Case mới với các loại: **Account & Billing** (vấn đề tài khoản, hóa đơn) và **Technical** (vấn đề kỹ thuật với dịch vụ AWS).
+* Lựa chọn mức độ nghiêm trọng (**Severity**) phù hợp: General guidance, System impaired, Production system impaired, Production system down, Business/Mission critical system down.
+* Theo dõi trạng thái yêu cầu hỗ trợ và quản lý phản hồi từ AWS Support team.
+
+#### 3. Thực hành với Hybrid DNS – Route 53 Resolver
+
+
 
 ##### **2.1 Tạo Key Pair**
 * Tạo Key Pair `hybrid-DNS` (RSA, định dạng `.pem`) dùng để giải mã mật khẩu Administrator khi kết nối vào RDGW instance.
