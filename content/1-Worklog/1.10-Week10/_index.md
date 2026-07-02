@@ -39,66 +39,52 @@ pre: " <b> 1.10. </b> "
 ##### 1. Introduction
 In this lab, we connect two separate VPCs (**VPC-A** and **VPC-B**) using **VPC Peering**. Additionally, we configure a **Network Access Control List (NACL)**—a stateless subnet-level firewall—to evaluate how stateless rules differ from stateful security groups and learn how to manage inbound and outbound traffic.
 
-![VPC Peering Connection Model](/images/worklog/week-10/vpc-peering-diagram.png)
-
 ##### 2. Prerequisites
 
 ###### 2.1 Initialize Infrastructure with CloudFormation
-We use an AWS CloudFormation template to quickly provision two isolated VPCs, subnets, and baseline route tables.
-
-The YAML template defines two VPCs:
-* **VPC-A:** CIDR `10.1.0.0/16` with Public Subnet `10.1.1.0/24`
-* **VPC-B:** CIDR `10.2.0.0/16` with Public Subnet `10.2.1.0/24`
-
+We use an AWS CloudFormation template to quickly provision the custom VPC.
+* VPC 1 (My VPC): Default VPC `172.31.0.0/16`
+* VPC 2 (HG VPC): Custom VPC `10.10.0.0/16`
+* YAML CloudFormation template `VPCTemplate.yaml` defines VPC 2 resources:
 ```yaml
 AWSTemplateFormatVersion: '2010-09-09'
-Description: 'Template setup 2 VPCs for VPC Peering Lab'
+Description: 'CloudFormation template to create a custom VPC 2 with CIDR 10.10.0.0/16'
 Resources:
-  VpcA:
+  HGVPCLab:
     Type: AWS::EC2::VPC
     Properties:
-      CidrBlock: 10.1.0.0/16
-      EnableDnsHostnames: true
+      CidrBlock: 10.10.0.0/16
       EnableDnsSupport: true
+      EnableDnsHostnames: true
       Tags:
         - Key: Name
-          Value: VPC-A
-  VpcB:
-    Type: AWS::EC2::VPC
-    Properties:
-      CidrBlock: 10.2.0.0/16
-      EnableDnsHostnames: true
-      EnableDnsSupport: true
-      Tags:
-        - Key: Name
-          Value: VPC-B
+          Value: HG-VPC-Lab
 ```
+* Verified CloudFormation stack execution output on the console:
+
+![CloudFormation VPC](/images/worklog/week-10/1_cloudformation_create_vpc.png)
 
 ###### 2.2 Create Security Group
 Create Security Groups for both VPCs:
-* `SG-VPC-A`: Allows inbound SSH (Port 22) from your IP and ICMP (Ping) from VPC-B CIDR (`10.2.0.0/16`).
-* `SG-VPC-B`: Allows inbound SSH (Port 22) from your IP and ICMP (Ping) from VPC-A CIDR (`10.1.0.0/16`).
+* `SG-VPC-1`: Allows inbound SSH (Port 22) from your IP and ICMP (Ping) from VPC 2 CIDR (`10.10.0.0/16`).
+* `SG-VPC-2`: Allows inbound SSH (Port 22) from your IP and ICMP (Ping) from VPC 1 CIDR (`172.31.0.0/16`).
 
 ###### 2.3 Launch EC2 Instance
-* Deploy **EC2-VPC-A** in the VPC-A public subnet.
-* Deploy **EC2-VPC-B** in the VPC-B public subnet.
-* Record the Public IPs and Private IPs of both instances.
-
----
+* Deploy EC2 Host in the VPC 1 public subnet.
+* Deploy EC2 Host in the VPC 2 public subnet.
 
 ##### 3. Configure VPC Peering
 VPC Peering establishes a direct route for private IP traffic between two VPCs.
-
 1. Go to the **VPC Console** -> **Peering connections** -> Click **Create peering connection**.
 2. Configure settings:
-   * **Name:** `Peering-A-B`
-   * **VPC (Requester):** Select `VPC-A`
-   * **Account:** My account
-   * **VPC (Accepter):** Select `VPC-B`
+   * **Name:** `MyVPC-to-HGVPC-Peering`
+   * **VPC (Requester):** Select `VPC 1` (Default VPC)
+   * **VPC (Accepter):** Select `VPC 2` (HG-VPC-Lab)
 3. Click **Create peering connection**.
 4. The connection status changes to `Pending acceptance`. Select it, click **Actions** -> **Accept request**.
+5. Verified active VPC Peering status on the console:
 
----
+![VPC Peering Active](/images/worklog/week-10/2_vpc_peering_active.png)
 
 ##### 4. Configure Route Tables
 After accepting the peering connection, we must update the route tables so VPCs know how to route cross-VPC traffic.
@@ -127,32 +113,29 @@ Unlike Security Groups which are **Stateful** (allowing inbound traffic implicit
 1. Create a custom NACL and associate it with VPC-A's Public Subnet.
 2. Define the Inbound and Outbound rules to allow communication:
    * **Inbound Rules:**
-     * Rule 100: Allow SSH (Port 22) from the internet (to connect to EC2-VPC-A).
-     * Rule 110: Allow ICMP (Ping) from `10.2.0.0/16`.
-     * Rule 120: Allow Ephemeral Ports (`1024-65535`) from anywhere (to receive packets for outgoing requests).
+     * Rule 100: Allow SSH (Port 22) from the internet (to connect to EC2).
+     * Rule 110: Allow ICMP (Ping) from `172.31.0.0/16`.
+     * Rule 120: Allow Ephemeral Ports (`1024-65535`) from anywhere.
    * **Outbound Rules:**
-     * Rule 100: Allow ICMP (Ping) to `10.2.0.0/16`.
-     * Rule 110: Allow Ephemeral Ports (`1024-65535`) to the internet (necessary to send SSH session traffic back and answer pings).
-3. **Test Ping Block:** Change the Inbound Rule 110 for ICMP from `Allow` to `Deny`. Ping from **EC2-VPC-B** to **EC2-VPC-A** to confirm that traffic is blocked.
-
----
+     * Rule 100: Allow ICMP (Ping) to `172.31.0.0/16`.
+     * Rule 110: Allow Ephemeral Ports (`1024-65535`) to the internet.
+3. **Test Ping Block:** Change the Inbound Rule 110 for ICMP from `Allow` to `Deny`. Ping from host inside VPC 1 to host inside VPC 2 to confirm that traffic is blocked.
 
 ##### 6. Enable Cross-Peer DNS Support
 By default, EC2 instances cannot resolve the private DNS names of instances in peered VPCs. We must enable this setting:
-
-1. Select **Peering Connections** -> Select `Peering-A-B`.
+1. Select **Peering Connections** -> Select `MyVPC-to-HGVPC-Peering`.
 2. Click **Actions** -> Select **Edit VPC connection settings**.
 3. Enable both:
    * **Requester DNS resolution:** `Allow accepter VPC to resolve DNS hostnames to private IPs`
    * **Accepter DNS resolution:** `Allow requester VPC to resolve DNS hostnames to private IPs`
 4. Click **Save**. Test by resolving the private DNS hostname of the peered instance using `nslookup`.
 
----
-
 ##### 7. Resource Cleanup
-* Terminate both EC2 Instances.
-* Delete the VPC Peering Connection (this automatically deletes the routes in route tables).
-* Delete the CloudFormation Stack to clean up VPC-A and VPC-B.
+Cleaned up services to prevent costs:
+```bash
+aws ec2 delete-vpc-peering-connection --vpc-peering-connection-id pcx-09f244ad36ffcd7ba
+aws cloudformation delete-stack --stack-name "HG-VPC-Stack"
+```
 
 ---
 

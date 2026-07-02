@@ -37,105 +37,74 @@ pre: " <b> 1.10. </b> "
 #### Lab 1: VPC Peering & Network ACL (Lab 19)
 
 ##### 1. Giới thiệu (Introduction)
-Trong bài thực hành này, chúng ta sẽ kết nối hai VPC riêng biệt (**VPC-A** và **VPC-B**) bằng tính năng **VPC Peering**. Đồng thời, chúng ta sẽ cấu hình **Network ACL (NACL)** - một lá chắn bảo mật dạng stateless ở cấp độ Subnet - để kiểm tra sự khác biệt của cơ chế stateless và cách thiết lập các luật truy cập inbound/outbound để cho phép/chặn traffic.
-
-![Mô hình kết nối VPC Peering](/images/worklog/week-10/vpc-peering-diagram.png)
+Trong bài thực hành này, chúng ta sẽ tiến hành kết nối hai VPC riêng biệt độc lập (**VPC-A** và **VPC-B**) bằng tính năng **VPC Peering**. Đồng thời, chúng ta sẽ cấu hình **Network ACL (NACL)** - một lá chắn bảo mật dạng stateless ở cấp độ Subnet - để kiểm tra sự khác biệt của cơ chế stateless và cách thiết lập các luật truy cập inbound/outbound để cho phép/chặn traffic.
 
 ##### 2. Các bước chuẩn bị (Prerequisites)
 
 ###### 2.1 Khởi tạo Hạ tầng bằng CloudFormation
 Để nhanh chóng thiết lập hai mạng VPC độc lập kèm theo các subnet và route table cơ bản, ta sử dụng một template AWS CloudFormation. 
-
-Mẫu cấu hình YAML định nghĩa hai VPC:
-* **VPC-A:** CIDR `10.1.0.0/16` có Public Subnet `10.1.1.0/24`
-* **VPC-B:** CIDR `10.2.0.0/16` có Public Subnet `10.2.1.0/24`
-
+* VPC 1 (My VPC): Mạng default VPC `172.31.0.0/16`
+* VPC 2 (HG VPC): Mạng custom VPC `10.10.0.0/16`
+* Mẫu cấu hình YAML `VPCTemplate.yaml` định nghĩa tài nguyên VPC 2:
 ```yaml
 AWSTemplateFormatVersion: '2010-09-09'
-Description: 'Template setup 2 VPCs for VPC Peering Lab'
+Description: 'CloudFormation template to create a custom VPC 2 with CIDR 10.10.0.0/16'
 Resources:
-  VpcA:
+  HGVPCLab:
     Type: AWS::EC2::VPC
     Properties:
-      CidrBlock: 10.1.0.0/16
-      EnableDnsHostnames: true
+      CidrBlock: 10.10.0.0/16
       EnableDnsSupport: true
+      EnableDnsHostnames: true
       Tags:
         - Key: Name
-          Value: VPC-A
-  VpcB:
-    Type: AWS::EC2::VPC
-    Properties:
-      CidrBlock: 10.2.0.0/16
-      EnableDnsHostnames: true
-      EnableDnsSupport: true
-      Tags:
-        - Key: Name
-          Value: VPC-B
+          Value: HG-VPC-Lab
 ```
+* Minh chứng triển khai thành công Stack CloudFormation tạo VPC 2 trên Console:
+
+![CloudFormation VPC](/images/worklog/week-10/1_cloudformation_create_vpc.png)
 
 ###### 2.2 Tạo Security Group
 Tạo hai Security Groups tương ứng cho từng VPC:
-* `SG-VPC-A`: Cho phép inbound SSH (Port 22) từ IP của bạn và cho phép ICMP (Ping) từ dải CIDR của VPC-B (`10.2.0.0/16`).
-* `SG-VPC-B`: Cho phép inbound SSH (Port 22) từ IP của bạn và cho phép ICMP (Ping) từ dải CIDR của VPC-A (`10.1.0.0/16`).
+* `SG-VPC-1`: Cho phép inbound SSH (Port 22) từ IP của bạn và cho phép ICMP (Ping) từ dải CIDR của VPC 2 (`10.10.0.0/16`).
+* `SG-VPC-2`: Cho phép inbound SSH (Port 22) từ IP của bạn và cho phép ICMP (Ping) từ dải CIDR của VPC 1 (`172.31.0.0/16`).
 
 ###### 2.3 Khởi chạy EC2 Instance
-* Khởi chạy **EC2-VPC-A** trong Public Subnet thuộc VPC-A.
-* Khởi chạy **EC2-VPC-B** trong Public Subnet thuộc VPC-B.
-* Ghi lại Public IP và Private IP của cả 2 instance.
-
----
+* Khởi chạy máy chủ EC2 trong Public Subnet thuộc VPC 1.
+* Khởi chạy máy chủ EC2 trong Public Subnet thuộc VPC 2.
 
 ##### 3. Cấu hình VPC Peering
 VPC Peering kết nối hai VPC bằng cách định tuyến traffic thông qua dải IP riêng tư.
-
 1. Truy cập **VPC Console** -> **Peering connections** -> **Create peering connection**.
 2. Thiết lập thông số:
-   * **Name:** `Peering-A-B`
-   * **VPC (Requester):** Chọn `VPC-A`
-   * **Account:** My account
-   * **VPC (Accepter):** Chọn `VPC-B`
+   * **Name:** `MyVPC-to-HGVPC-Peering`
+   * **VPC (Requester):** Chọn `VPC 1` (Default VPC)
+   * **VPC (Accepter):** Chọn `VPC 2` (HG-VPC-Lab)
 3. Nhấp chọn **Create peering connection**.
 4. Trạng thái kết nối sẽ là `Pending acceptance`. Chọn kết nối vừa tạo, nhấp vào **Actions** -> **Accept request**.
+5. Minh chứng kết nối VPC Peering hoạt động ở trạng thái `Active`:
 
----
+![VPC Peering Active](/images/worklog/week-10/2_vpc_peering_active.png)
 
 ##### 4. Cấu hình Route Tables (Bảng định tuyến)
 Sau khi tạo kết nối Peering, ta cần thêm cấu hình định tuyến để hệ thống biết cách gửi traffic giữa 2 VPC.
-
-* **Tại Route Table của VPC-A (Public Route Table A):**
-  * Thêm dòng Route: Destination `10.2.0.0/16` -> Target: `Peering Connection` (`pcx-xxxxxx`).
-* **Tại Route Table của VPC-B (Public Route Table B):**
-  * Thêm dòng Route: Destination `10.1.0.0/16` -> Target: `Peering Connection` (`pcx-xxxxxx`).
-
-{{% notice info "Kiểm thử kết nối" %}}
-SSH vào **EC2-VPC-A**, sau đó thực hiện lệnh ping tới địa chỉ **Private IP** của **EC2-VPC-B**:
-```bash
-ping 10.2.1.X
-```
-If ping successful, then the VPC Peering connection is working.
-{{% /notice %}}
-
----
+* **Tại Route Table của VPC 1:**
+  * Thêm dòng Route: Destination `10.10.0.0/16` -> Target: `Peering Connection` (`pcx-09f244ad36ffcd7ba`).
+* **Tại Route Table của VPC 2:**
+  * Thêm dòng Route: Destination `172.31.0.0/16` -> Target: `Peering Connection` (`pcx-09f244ad36ffcd7ba`).
 
 ##### 5. Cấu hình Network ACL (NACL) - Kiểm thử cơ chế Stateless
-
-{{% notice warning "Lưu ý quan trọng về NACL" %}}
 Khác với Security Group là **Stateful** (chỉ cần cấu hình chiều Inbound là chiều Outbound tự mở), Network ACL hoạt động theo cơ chế **Stateless**. Điều này đồng nghĩa với việc bạn phải cấu hình tường minh cả chiều đi (**Outbound Rules**) lẫn chiều về (**Inbound Rules**).
-{{% /notice %}}
-
-1. Tạo một Custom NACL và gán liên kết (Associate) nó với Public Subnet của VPC-A.
+1. Tạo một Custom NACL và gán liên kết (Associate) nó với Public Subnet của VPC 2.
 2. Thiết lập các Inbound Rules và Outbound Rules để cho phép giao tiếp:
    * **Inbound Rules:**
-     * Rule 100: Allow SSH (Port 22) từ internet để SSH vào EC2-VPC-A.
-     * Rule 110: Allow ICMP (Ping) từ dải IP `10.2.0.0/16`.
-     * Rule 120: Allow Ephemeral Ports (Port `1024-65535`) từ bất kỳ đâu (để nhận phản hồi từ các request đi ra ngoài).
+     * Rule 100: Allow SSH (Port 22) từ internet để SSH vào EC2.
+     * Rule 110: Allow ICMP (Ping) từ dải IP `172.31.0.0/16` (VPC 1).
+     * Rule 120: Allow Ephemeral Ports (Port `1024-65535`) từ bất kỳ đâu.
    * **Outbound Rules:**
-     * Rule 100: Allow ICMP (Ping) đi tới dải IP `10.2.0.0/16`.
-     * Rule 110: Allow Ephemeral Ports (Port `1024-65535`) đi ra internet (cần thiết để trả traffic cho phiên làm việc SSH của bạn và phản hồi dữ liệu ping).
-3. **Thử nghiệm chặn ping:** Đổi Rule 110 của Inbound từ `Allow` sang `Deny`. Thực hiện ping lại từ **EC2-VPC-B** sang **EC2-VPC-A** để kiểm chứng việc chặn traffic thành công.
-
----
+     * Rule 100: Allow ICMP (Ping) đi tới dải IP `172.31.0.0/16`.
+     * Rule 110: Allow Ephemeral Ports (Port `1024-65535`) đi ra internet.
+3. **Thử nghiệm chặn ping:** Đổi Rule 110 của Inbound từ `Allow` sang `Deny`. Thực hiện ping lại từ máy ảo VPC 1 sang máy ảo VPC 2 để kiểm chứng việc chặn traffic thành công.
 
 ##### 6. Cấu hình Cross-Peer DNS Support
 Theo mặc định, các EC2 Instance nằm chéo VPC Peering sẽ không thể phân giải DNS private của nhau sang IP Private. Ta cần bật tính năng này:
