@@ -60,25 +60,56 @@ pre: " <b> 1.6. </b> "
 
 #### 2. Hybrid DNS – Route 53 Resolver Workshop
 
-##### **Infrastructure Setup (CloudFormation)**
-* Created Key Pair `hybrid-DNS` and successfully deployed `HybridDNS` CloudFormation stack with a multi-AZ VPC, 4 subnets (2 public / 2 private), Security Group, and a Windows Server 2022 RDGW instance.
+##### **2.1 Generate Key Pair**
+* Created Key Pair `hybrid-DNS` (RSA, `.pem` format) used to decrypt the Administrator password for connecting to the RDGW instance.
+
+##### **2.2 Initialize CloudFormation Template**
+* Downloaded the template from the GitHub repository and deployed the `HybridDNS` CloudFormation stack with: Availability Zones `ap-southeast-1a` & `ap-southeast-1c`, Key Pair `hybrid-DNS`, Instance Type `t3.micro`.
+* Stack completed successfully (`CREATE_COMPLETE`), provisioning a multi-AZ VPC, 2 public subnets, 2 private subnets, Internet Gateway, Route Table, Security Group, and a Windows Server 2022 RDGW EC2 instance.
 
 ![CloudFormation HybridDNS CREATE_COMPLETE](/images/worklog/week-6/2.2_cloudformation_complete.png)
 
-##### **Microsoft Active Directory Deployment**
-* Successfully deployed AWS Managed Microsoft AD (`onprem.example.com`) simulating an on-premises DNS system. Status: **Active**.
+##### **2.3 Configuring Security Group**
+* Accessed the Security Group with description *"Enable RDP access from Internet"*.
+* Deleted unnecessary inbound rules (Port 3391, Port 443).
+* Restricted **RDP (3389)** and **ICMP** rules to only allow access from the lab machine's IP (`0.0.0.0/0` for lab scope) instead of the entire Internet.
+
+##### **3. Connecting to RDGW**
+* Downloaded the RDP file from EC2 Console and decrypted the Administrator password using `hybrid-DNS.pem`.
+* Successfully connected to the Windows Server 2022 instance via Remote Desktop Protocol (RDP) at public IP `54.179.30.229`.
+
+##### **4. Microsoft AD Deployment**
+* Deployed **AWS Managed Microsoft AD** with the following configuration:
+  * **Directory DNS name:** `onprem.example.com` (simulates the on-premises DNS system)
+  * **NetBIOS name:** `onprem`
+  * **Edition:** Standard
+  * **VPC & Subnets:** Private subnet 1A (`ap-southeast-1a`) and Private subnet 2A (`ap-southeast-1b`)
+* After ~20 minutes, status changed to **Active**, with 2 DNS IP addresses assigned: `10.0.25.100` and `10.0.44.109`.
 
 ![Microsoft AD Active](/images/worklog/week-6/4_microsoft_ad_active.png)
 
-##### **Route 53 Resolver Configuration**
-* Created **Outbound Endpoint** (`outbound-endpoint`) attached to 2 private subnets, status **Operational** – forwards DNS queries from AWS to the on-premises DNS server.
-* Created **Resolver Rule** (`onprem-rule`) of type FORWARD for domain `onprem.example.com`, targeting the 2 AD DNS IPs and associated with the VPC.
-* Created **Inbound Endpoint** (`inbound-endpoint`) status **Operational** – allows on-premises DNS to query internal AWS resources.
+##### **5.1 Create Route 53 Outbound Endpoint**
+* Created Outbound Endpoint `outbound-endpoint` (IPv4, Do53) attached to 2 private subnets (`ap-southeast-1a` and `ap-southeast-1b`), status **Operational**.
+* This endpoint allows Route 53 Resolver to forward DNS queries from AWS to the on-premises DNS system (AWS Managed Microsoft AD).
 
 ![Outbound Endpoint Operational](/images/worklog/week-6/5.1_outbound_endpoint.png)
 
+##### **5.2 Create Route 53 Resolver Rules**
+* Created Resolver Rule `onprem-rule` of type **FORWARD** for domain `onprem.example.com`:
+  * **Outbound Endpoint:** `outbound-endpoint`
+  * **Target IPs:** `10.0.25.100:53` and `10.0.44.109:53` (2 AD DNS IPs)
+* Associated the Rule with the `HybridDNS` VPC – all DNS queries for `onprem.example.com` within the VPC are forwarded to the AD DNS server.
+
 ![Resolver Rule onprem.example.com](/images/worklog/week-6/5.2_resolver_rule.png)
+
+##### **5.3 Create Route 53 Inbound Endpoint**
+* Created Inbound Endpoint `inbound-endpoint` (IPv4, Do53) attached to 2 private subnets, status **Operational**.
+* This endpoint allows the on-premises DNS system (AWS Managed Microsoft AD) to send DNS queries back into Route 53 Resolver to resolve Private Hosted Zones in AWS.
 
 ![Inbound Endpoint Operational](/images/worklog/week-6/5.3_inbound_endpoint.png)
 
+##### **5.4 Test Results**
+* From the RDGW server, ran `nslookup onprem.example.com` and `Resolve-DnsName onprem.example.com` in PowerShell to verify that DNS resolution works correctly through the configured Hybrid DNS system.
 
+##### **6. Clean Up Resources**
+* Deleted resources in the correct order: **Inbound Endpoint** → **Disassociate & delete Resolver Rule** → **Outbound Endpoint** → **AWS Managed Microsoft AD** → **CloudFormation Stack HybridDNS** → **Key Pair**.

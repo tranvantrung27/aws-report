@@ -60,25 +60,56 @@ pre: " <b> 1.6. </b> "
 
 #### 2. Thực hành với Hybrid DNS – Route 53 Resolver
 
-##### **Khởi tạo hạ tầng (CloudFormation)**
-* Tạo Key Pair `hybrid-DNS` và triển khai thành công stack CloudFormation `HybridDNS` bao gồm VPC đa AZ, 4 subnet (2 public / 2 private), Security Group và máy chủ Windows Server 2022 (RDGW).
+##### **2.1 Tạo Key Pair**
+* Tạo Key Pair `hybrid-DNS` (RSA, định dạng `.pem`) dùng để giải mã mật khẩu Administrator khi kết nối vào RDGW instance.
+
+##### **2.2 Khởi tạo CloudFormation Template**
+* Tải template từ GitHub repository và tạo stack CloudFormation `HybridDNS` với các thông số: Availability Zones `ap-southeast-1a` & `ap-southeast-1c`, Key Pair `hybrid-DNS`, Instance Type `t3.micro`.
+* Stack khởi tạo thành công (`CREATE_COMPLETE`) bao gồm VPC đa AZ, 2 public subnet, 2 private subnet, Internet Gateway, Route Table, Security Group và EC2 instance RDGW chạy Windows Server 2022.
 
 ![CloudFormation HybridDNS CREATE_COMPLETE](/images/worklog/week-6/2.2_cloudformation_complete.png)
 
-##### **Triển khai Microsoft Active Directory**
-* Triển khai thành công AWS Managed Microsoft AD (`onprem.example.com`) mô phỏng hệ thống DNS on-premises, trạng thái **Active**.
+##### **2.3 Cấu hình Security Group**
+* Truy cập Security Group có mô tả *"Enable RDP access from Internet"*.
+* Xóa các rule không cần thiết (Port 3391, Port 443).
+* Giới hạn rule **RDP (3389)** và **ICMP** chỉ cho phép từ IP của máy thực hành (`0.0.0.0/0` trong phạm vi lab) thay vì mở toàn bộ Internet.
+
+##### **3. Kết nối RDGW (Remote Desktop Gateway)**
+* Tải file RDP từ EC2 Console và giải mã mật khẩu Administrator bằng file `hybrid-DNS.pem`.
+* Kết nối thành công vào máy chủ Windows Server 2022 qua Remote Desktop Protocol (RDP) với địa chỉ IP public `54.179.30.229`.
+
+##### **4. Triển khai Microsoft Active Directory**
+* Triển khai **AWS Managed Microsoft AD** với thông tin:
+  * **Directory DNS name:** `onprem.example.com` (mô phỏng hệ thống DNS on-premises)
+  * **NetBIOS name:** `onprem`
+  * **Edition:** Standard
+  * **VPC & Subnets:** Private subnet 1A (`ap-southeast-1a`) và Private subnet 2A (`ap-southeast-1b`)
+* Sau ~20 phút, trạng thái chuyển sang **Active**, nhận được 2 địa chỉ DNS IP: `10.0.25.100` và `10.0.44.109`.
 
 ![Microsoft AD Active](/images/worklog/week-6/4_microsoft_ad_active.png)
 
-##### **Cấu hình Route 53 Resolver**
-* Tạo **Outbound Endpoint** (`outbound-endpoint`) gắn vào 2 private subnet, trạng thái **Operational** – dùng để chuyển tiếp DNS query từ AWS đến DNS on-premises.
-* Tạo **Resolver Rule** (`onprem-rule`) loại FORWARD cho domain `onprem.example.com`, chỉ đến 2 IP DNS của AD và liên kết với VPC.
-* Tạo **Inbound Endpoint** (`inbound-endpoint`) trạng thái **Operational** – cho phép DNS on-premises truy vấn các tài nguyên nội bộ AWS.
+##### **5.1 Tạo Route 53 Outbound Endpoint**
+* Tạo Outbound Endpoint `outbound-endpoint` (IPv4, Do53) gắn vào 2 private subnet (`ap-southeast-1a` và `ap-southeast-1b`), trạng thái **Operational**.
+* Endpoint này cho phép Route 53 Resolver chuyển tiếp DNS query từ AWS ra hệ thống DNS on-premises (AWS Managed Microsoft AD).
 
 ![Outbound Endpoint Operational](/images/worklog/week-6/5.1_outbound_endpoint.png)
 
+##### **5.2 Tạo Route 53 Resolver Rules**
+* Tạo Resolver Rule `onprem-rule` loại **FORWARD** cho domain `onprem.example.com`:
+  * **Outbound Endpoint:** `outbound-endpoint`
+  * **Target IP:** `10.0.25.100:53` và `10.0.44.109:53` (2 DNS IP của AD)
+* Liên kết Rule với VPC `HybridDNS` – mọi DNS query cho `onprem.example.com` trong VPC sẽ được chuyển tiếp đến AD DNS server.
+
 ![Resolver Rule onprem.example.com](/images/worklog/week-6/5.2_resolver_rule.png)
+
+##### **5.3 Tạo Route 53 Inbound Endpoint**
+* Tạo Inbound Endpoint `inbound-endpoint` (IPv4, Do53) gắn vào 2 private subnet, trạng thái **Operational**.
+* Endpoint này cho phép hệ thống DNS on-premises (AWS Managed Microsoft AD) gửi DNS query ngược lại vào Route 53 Resolver để phân giải các Private Hosted Zone trong AWS.
 
 ![Inbound Endpoint Operational](/images/worklog/week-6/5.3_inbound_endpoint.png)
 
+##### **5.4 Kiểm tra kết quả**
+* Từ máy chủ RDGW, chạy lệnh `nslookup onprem.example.com` và `Resolve-DnsName onprem.example.com` trên PowerShell để xác minh DNS resolution hoạt động đúng qua hệ thống Hybrid DNS đã cấu hình.
 
+##### **6. Dọn dẹp tài nguyên**
+* Xóa theo đúng thứ tự: **Inbound Endpoint** → **Disassociate & xóa Resolver Rule** → **Outbound Endpoint** → **AWS Managed Microsoft AD** → **CloudFormation Stack HybridDNS** → **Key Pair**.
