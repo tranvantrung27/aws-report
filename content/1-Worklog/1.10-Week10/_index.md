@@ -306,6 +306,9 @@ def sent_slack(action_stop):
 Set up recurring schedules to execute the Lambda functions based on Cron expressions:
 * Rule Stop (`dc-common-lambda-auto-stop`): Scheduled to stop the servers at 8:00 PM on weekdays.
 * Rule Start (`dc-common-lambda-auto-start`): Scheduled to start the servers at 8:00 AM.
+* Verified successful trigger rule configuration on the Amazon EventBridge Console:
+
+![EventBridge Rule](/images/worklog/week-10/6_eventbridge_rule.png)
 
 ##### 6. Check Result
 1. Perform a manual test by clicking **Test** in the `dc-common-lambda-auto-stop` function console.
@@ -316,6 +319,10 @@ Set up recurring schedules to execute the Lambda functions based on Cron express
 3. Verified the target EC2 Instance successfully transitioned to the `stopped` state on the console:
 
 ![EC2 Stopped Status](/images/worklog/week-10/5_ec2_stopped_status.png)
+
+4. Verified AWS CloudWatch Logs successfully recorded the Lambda function execution history:
+
+![CloudWatch Logs](/images/worklog/week-10/7_cloudwatch_logs.png)
 
 ##### 7. Clean up resources
 Perform resource cleanup to avoid unnecessary costs:

@@ -302,6 +302,9 @@ def sent_slack(action_stop):
 Chúng ta thiết lập lịch trình tự động gọi 2 Lambda Function theo lịch Cron mong muốn để Bật/Tắt EC2 theo giờ:
 * Rule Stop (`dc-common-lambda-auto-stop`): Lập lịch tự động tắt máy chủ vào 20:00 tối các ngày trong tuần.
 * Rule Start (`dc-common-lambda-auto-start`): Lập lịch tự động bật máy chủ vào 08:00 sáng.
+* Minh chứng cấu hình Rule kích hoạt thành công trên Amazon EventBridge Console:
+
+![EventBridge Rule](/images/worklog/week-10/6_eventbridge_rule.png)
 
 ##### 6. Kiểm tra Kết quả (Check Result)
 1. Thử nghiệm thủ công: Vào Lambda Function `dc-common-lambda-auto-stop`, tạo test event và chạy thử nghiệm (Test).
@@ -312,6 +315,10 @@ Chúng ta thiết lập lịch trình tự động gọi 2 Lambda Function theo 
 3. Minh chứng trạng thái EC2 Instance chuyển sang `stopped` thành công sau khi Lambda hoạt động:
 
 ![EC2 Stopped Status](/images/worklog/week-10/5_ec2_stopped_status.png)
+
+4. Minh chứng hệ thống AWS CloudWatch Logs ghi nhận lại lịch sử chạy thành công của hàm Lambda:
+
+![CloudWatch Logs](/images/worklog/week-10/7_cloudwatch_logs.png)
 
 ##### 7. Dọn dẹp tài nguyên (Clean up resources)
 Thực hiện dọn dẹp để tránh phát sinh chi phí:
