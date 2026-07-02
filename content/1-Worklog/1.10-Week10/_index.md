@@ -135,81 +135,76 @@ aws cloudformation delete-stack --stack-name "HG-VPC-Stack"
 
 ---
 
-#### Lab 2: AWS Transit Gateway (Lab 20)
+#### Set up AWS Transit Gateway
 
 ##### 1. Introduction
 As the number of VPCs scales up, setting up full-mesh VPC Peering becomes complex. **AWS Transit Gateway (TGW)** acts as a central cloud router connecting VPCs in a Hub-and-Spoke topology, simplifying routing management and network scale-out.
 
-In this lab, we build 3 VPCs: **VPC-A (10.1.0.0/16)**, **VPC-B (10.2.0.0/16)**, and **VPC-C (10.3.0.0/16)**. We configure them to route traffic chéo via a centralized Transit Gateway.
-
-![Transit Gateway Hub and Spoke Architecture](/images/worklog/week-10/transit-gateway-diagram.png)
+In this lab, we build 4 independent VPCs:
+* **VPC1 (Public):** `172.16.1.0/24`
+* **VPC2 (Private):** `172.16.2.0/24`
+* **VPC3 (Public):** `172.16.3.0/24`
+* **VPC4 (Private):** `172.16.4.0/24`
 
 ##### 2. Preparation
-1. Create 3 independent VPCs with DNS Hostnames enabled:
-   * **VPC-A:** CIDR `10.1.0.0/16` - Subnet: `10.1.1.0/24`
-   * **VPC-B:** CIDR `10.2.0.0/16` - Subnet: `10.2.1.0/24`
-   * **VPC-C:** CIDR `10.3.0.0/16` - Subnet: `10.3.1.0/24`
-2. Create Security Groups permitting SSH and ICMP (Ping) on all 3 VPCs.
-3. Deploy 1 EC2 instance in each VPC.
+We use an AWS CloudFormation template `tgw-lab.yaml` to quickly provision the 4 custom VPCs with non-overlapping CIDRs:
+```yaml
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Template to create 4 VPCs for AWS Transit Gateway Lab'
+Resources:
+  VPC1:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 172.16.1.0/24
+...
+```
+* Verified CloudFormation stack execution output creating 4 VPCs on the console:
 
----
+![CloudFormation TGW VPCs](/images/worklog/week-10/1_cloudformation_tgw_vpc.png)
 
-##### 3. Create Transit Gateway
+##### 3. Create AWS Transit Gateway
 1. Open the **VPC Console** -> **Transit gateways** -> Click **Create transit gateway**.
 2. Enter values:
-   * **Name:** `My-Transit-Gateway`
-   * **Description:** Transit Gateway connecting VPC-A, B, and C
-   * Keep other settings as default (Auto-accept Shared Attachments, Default Route Table Association, and Route Propagation).
-3. Click **Create transit gateway** (creation takes 3-5 minutes, wait until state is `available`).
+   * **Name:** `lab20-tgw`
+   * **Description:** `Transit Gateway for lab20`
+   * *Important:* Uncheck both **Default route table association** and **Default route table propagation** options to manage route definitions manually.
+3. Verified Transit Gateway state changed to `available` on the console:
 
----
+![Transit Gateway Created](/images/worklog/week-10/2_tgw_created.png)
 
 ##### 4. Create Transit Gateway Attachments
-Link each VPC to the Transit Gateway.
-
+Link all 4 VPCs to the Transit Gateway.
 1. Select **Transit gateway attachments** -> Click **Create transit gateway attachment**.
-2. Setup attachment for **VPC-A**:
-   * **Transit gateway ID:** Select `My-Transit-Gateway`.
-   * **Attachment type:** `VPC`
-   * **Attachment name:** `Attach-VPC-A`
-   * **VPC ID:** Select `VPC-A`
-   * **Subnet:** Select the subnet of VPC-A.
-3. Click **Create attachment**.
-4. Repeat the steps for **VPC-B** (`Attach-VPC-B`) and **VPC-C** (`Attach-VPC-C`). Wait until all attachments show `Associated`.
+2. Setup attachments for the 4 VPCs (`VPC1-Attachment`, `VPC2-Attachment`, `VPC3-Attachment`, `VPC4-Attachment`).
+3. Verified all 4 attachments state changed to `available` on the console:
 
----
+![TGW Attachments](/images/worklog/week-10/3_tgw_attachments.png)
 
-##### 5. Configure Routing on VPC Route Tables
-To forward traffic from the VPCs to the Transit Gateway, we need to add routes in each VPC's Route Table.
+##### 5. Create Transit Gateway Route Tables (TGW RT)
+1. Create a custom Transit Gateway Route Table named `lab20-TGW-RT`.
+2. **Associations:** Map and associate all 4 VPC attachments to the route table.
+3. **Propagations:** Enable and propagate the CIDR ranges of all 4 VPC attachments into the route table.
+4. Verified TGW Route Table association and propagation lists on the console:
 
-* **VPC-A Route Table:**
-  * Add Route: Destination `10.2.0.0/16` -> Target: `Transit Gateway` (`tgw-xxxx`)
-  * Add Route: Destination `10.3.0.0/16` -> Target: `Transit Gateway` (`tgw-xxxx`)
-* **VPC-B Route Table:**
-  * Add Route: Destination `10.1.0.0/16` -> Target: `Transit Gateway` (`tgw-xxxx`)
-  * Add Route: Destination `10.3.0.0/16` -> Target: `Transit Gateway` (`tgw-xxxx`)
-* **VPC-C Route Table:**
-  * Add Route: Destination `10.1.0.0/16` -> Target: `Transit Gateway` (`tgw-xxxx`)
-  * Add Route: Destination `10.2.0.0/16` -> Target: `Transit Gateway` (`tgw-xxxx`)
+![TGW Route Table](/images/worklog/week-10/4_tgw_route_table.png)
 
----
+##### 6. Add Transit Gateway Routes to VPC Route Tables
+Configure routes in each VPC's Route Table to direct traffic heading to other VPCs to the Transit Gateway:
+* **VPC 1 and VPC 3 Route Tables:**
+  * Add Route: Destination `172.16.0.0/16` -> Target: `Transit Gateway` (`lab20-tgw`).
+* **VPC 2 and VPC 4 Route Tables:**
+  * Add Route: Destination `0.0.0.0/0` -> Target: `Transit Gateway` (`lab20-tgw`).
+* Verified route configuration on the VPC 1 route table console page:
 
-##### 6. Verification
-1. SSH into **EC2-VPC-A** (`10.1.1.X`).
-2. Ping **EC2-VPC-B** (`10.2.1.Y`) and **EC2-VPC-C** (`10.3.1.Z`):
-   ```bash
-   ping 10.2.1.Y
-   ping 10.3.1.Z
-   ```
-3. If responses are received, the three VPC networks are communicating successfully through the Transit Gateway.
-
----
+![VPC Route to TGW](/images/worklog/week-10/5_vpc_route_to_tgw.png)
 
 ##### 7. Resource Cleanup
-* Terminate the EC2 Instances.
-* Select and delete all 3 attachments (`Attach-VPC-A`, `Attach-VPC-B`, `Attach-VPC-C`) under **Transit gateway attachments**.
-* Delete `My-Transit-Gateway` under **Transit gateways**.
-* Delete VPC-A, VPC-B, and VPC-C.
+Clean up all services to prevent costs:
+```bash
+aws ec2 delete-transit-gateway-vpc-attachment --transit-gateway-attachment-id <attachment-id>
+aws ec2 delete-transit-gateway --transit-gateway-id tgw-0a9e3b1327077381a
+aws cloudformation delete-stack --stack-name "Lab20-Stack"
+```
 
 ---
 

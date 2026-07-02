@@ -132,81 +132,76 @@ Theo mặc định, các EC2 Instance nằm chéo VPC Peering sẽ không thể 
 
 ---
 
-#### Lab 2: AWS Transit Gateway (Lab 20)
+#### Thiết lập AWS Transit Gateway
 
 ##### 1. Giới thiệu (Introduction)
 Khi số lượng VPC trong doanh nghiệp tăng lên, việc thiết lập VPC Peering kiểu mạng lưới (full-mesh) sẽ cực kỳ phức tạp và khó kiểm soát. **AWS Transit Gateway (TGW)** hoạt động như một Cloud Router trung tâm kết nối các VPC chéo theo kiến trúc Hub-and-Spoke, giúp quản lý tập trung và định tuyến lưu lượng hiệu quả.
 
-Trong bài lab này, ta sẽ khởi tạo 3 VPC: **VPC-A (10.1.0.0/16)**, **VPC-B (10.2.0.0/16)**, và **VPC-C (10.3.0.0/16)**. Chúng ta sẽ cấu hình để 3 VPC này truyền thông tin chéo qua nhau thông qua một Transit Gateway tập trung.
-
-![Kiến trúc Transit Gateway Hub and Spoke](/images/worklog/week-10/transit-gateway-diagram.png)
+Trong bài thực hành này, ta sẽ khởi tạo 4 VPC độc lập chéo nhau:
+* **VPC1 (Public):** `172.16.1.0/24`
+* **VPC2 (Private):** `172.16.2.0/24`
+* **VPC3 (Public):** `172.16.3.0/24`
+* **VPC4 (Private):** `172.16.4.0/24`
 
 ##### 2. Các bước chuẩn bị (Preparation)
-1. Tạo 3 VPC độc lập có bật tính năng DNS Hostnames:
-   * **VPC-A:** CIDR `10.1.0.0/16` - Subnet: `10.1.1.0/24`
-   * **VPC-B:** CIDR `10.2.0.0/16` - Subnet: `10.2.1.0/24`
-   * **VPC-C:** CIDR `10.3.0.0/16` - Subnet: `10.3.1.0/24`
-2. Tạo Security Group cho phép SSH và ICMP (Ping) trên cả 3 VPC.
-3. Khởi chạy 1 EC2 Instance trong mỗi VPC tương ứng.
+Để nhanh chóng khởi tạo hạ tầng của cả 4 VPC với các dải CIDR không trùng lặp, ta sử dụng một template AWS CloudFormation `tgw-lab.yaml`:
+```yaml
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Template to create 4 VPCs for AWS Transit Gateway Lab'
+Resources:
+  VPC1:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 172.16.1.0/24
+...
+```
+* Minh chứng triển khai thành công Stack CloudFormation tạo 4 VPC trên Console:
 
----
+![CloudFormation TGW VPCs](/images/worklog/week-10/1_cloudformation_tgw_vpc.png)
 
-##### 3. Tạo Transit Gateway
+##### 3. Tạo AWS Transit Gateway
 1. Truy cập **VPC Console** -> **Transit gateways** -> **Create transit gateway**.
 2. Điền thông tin:
-   * **Name:** `My-Transit-Gateway`
-   * **Description:** Transit Gateway connecting VPC-A, B, and C
-   * Các tùy chọn khác giữ nguyên mặc định (bao gồm tự động tạo Default Route Table Association và Propagation).
-3. Nhấp chọn **Create transit gateway** (Quá trình khởi tạo mất khoảng 3-5 phút, đợi trạng thái chuyển sang `available`).
+   * **Name:** `lab20-tgw`
+   * **Description:** `Transit Gateway for lab20`
+   * *Quan trọng:* Bỏ chọn (Uncheck) mục **Default route table association** và **Default route table propagation** để tự cấu hình thủ công.
+3. Minh chứng Transit Gateway được tạo thành công ở trạng thái `available`:
 
----
+![Transit Gateway Created](/images/worklog/week-10/2_tgw_created.png)
 
 ##### 4. Khởi tạo Transit Gateway Attachments
-Ta cần liên kết (attach) từng VPC vào Transit Gateway vừa tạo.
-
+Ta cần liên kết (attach) cả 4 VPC vào Transit Gateway vừa tạo.
 1. Chọn **Transit gateway attachments** -> **Create transit gateway attachment**.
-2. Cấu hình liên kết cho **VPC-A**:
-   * **Transit gateway ID:** Chọn `My-Transit-Gateway`.
-   * **Attachment type:** `VPC`
-   * **Attachment name:** `Attach-VPC-A`
-   * **VPC ID:** Chọn `VPC-A`
-   * **Subnet:** Chọn Subnet của VPC-A.
-3. Nhấp chọn **Create attachment**.
-4. Thực hiện lặp lại bước trên cho **VPC-B** (`Attach-VPC-B`) và **VPC-C** (`Attach-VPC-C`). Đợi tất cả chuyển sang trạng thái `Associated`.
+2. Thực hiện cấu hình liên kết VPC lần lượt cho cả 4 VPC (`VPC1-Attachment`, `VPC2-Attachment`, `VPC3-Attachment`, `VPC4-Attachment`).
+3. Minh chứng cả 4 Attachments chuyển sang trạng thái hoạt động `available` thành công:
 
----
+![TGW Attachments](/images/worklog/week-10/3_tgw_attachments.png)
 
-##### 5. Cấu hình Định tuyến trên VPC Route Tables
-Sau khi liên kết hạ tầng vật lý vào Transit Gateway, ta cần bổ sung route trên các Route Table của từng VPC để chuyển tiếp dữ liệu đến Transit Gateway khi muốn liên lạc chéo VPC.
+##### 5. Cấu hình Transit Gateway Route Table (TGW RT)
+1. Tạo một Transit Gateway Route Table riêng với tên `lab20-TGW-RT`.
+2. **Associations:** Thực hiện liên kết bảng định tuyến này tới cả 4 VPC Attachments.
+3. **Propagations:** Thực hiện quảng bá định tuyến của cả 4 VPC Attachments vào bảng định tuyến.
+4. Minh chứng Transit Gateway Route Table được liên kết và quảng bá thành công:
 
-* **Bảng định tuyến VPC-A:**
-  * Thêm Route: Destination `10.2.0.0/16` -> Target: `Transit Gateway` (`tgw-xxxx`)
-  * Thêm Route: Destination `10.3.0.0/16` -> Target: `Transit Gateway` (`tgw-xxxx`)
-* **Bảng định tuyến VPC-B:**
-  * Thêm Route: Destination `10.1.0.0/16` -> Target: `Transit Gateway` (`tgw-xxxx`)
-  * Thêm Route: Destination `10.3.0.0/16` -> Target: `Transit Gateway` (`tgw-xxxx`)
-* **Bảng định tuyến VPC-C:**
-  * Thêm Route: Destination `10.1.0.0/16` -> Target: `Transit Gateway` (`tgw-xxxx`)
-  * Thêm Route: Destination `10.2.0.0/16` -> Target: `Transit Gateway` (`tgw-xxxx`)
+![TGW Route Table](/images/worklog/week-10/4_tgw_route_table.png)
 
----
+##### 6. Cấu hình Định tuyến trên các Route Table của VPC
+Bổ sung tuyến đường (Route) trên Route Table của từng VPC để chuyển tiếp dữ liệu đến Transit Gateway:
+* **Route Table của VPC 1 và VPC 3:**
+  * Thêm Route: Destination `172.16.0.0/16` -> Target: `Transit Gateway` (`lab20-tgw`).
+* **Route Table của VPC 2 và VPC 4:**
+  * Thêm Route: Destination `0.0.0.0/0` -> Target: `Transit Gateway` (`lab20-tgw`).
+* Minh chứng cấu hình Route trỏ dải `172.16.0.0/16` qua Transit Gateway thành công trên Route Table của VPC 1:
 
-##### 6. Kiểm tra kết quả (Verification)
-1. SSH vào **EC2-VPC-A** (`10.1.1.X`).
-2. Thực hiện ping sang **EC2-VPC-B** (`10.2.1.Y`) và **EC2-VPC-C** (`10.3.1.Z`):
-   ```bash
-   ping 10.2.1.Y
-   ping 10.3.1.Z
-   ```
-3. Nếu nhận được tín hiệu trả lời (reply) ổn định, cả 3 mạng VPC đã định tuyến chéo thành công thông qua Transit Gateway.
-
----
+![VPC Route to TGW](/images/worklog/week-10/5_vpc_route_to_tgw.png)
 
 ##### 7. Dọn dẹp tài nguyên (Cleanup)
-* Xóa các EC2 Instances.
-* Truy cập **Transit gateway attachments**, chọn và xóa lần lượt cả 3 Attachments (`Attach-VPC-A`, `Attach-VPC-B`, `Attach-VPC-C`).
-* Truy cập **Transit gateways** và chọn xóa `My-Transit-Gateway`.
-* Tiến hành xóa các VPC-A, VPC-B, VPC-C để tránh phát sinh hóa đơn.
+Thực hiện dọn dẹp để tránh phát sinh chi phí:
+```bash
+aws ec2 delete-transit-gateway-vpc-attachment --transit-gateway-attachment-id <attachment-id>
+aws ec2 delete-transit-gateway --transit-gateway-id tgw-0a9e3b1327077381a
+aws cloudformation delete-stack --stack-name "Lab20-Stack"
+```
 
 ---
 
