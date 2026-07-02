@@ -43,18 +43,43 @@ Trong bài thực hành này, chúng ta sẽ tiến hành container hóa ứng d
 ##### 2. Chuẩn bị (Preparation)
 
 ###### 2.1 Cấu hình hạ tầng (Infrastructure Configuration)
-Thiết lập VPC tùy chỉnh có tên là `ECS-VPC` với dải CIDR `10.0.0.0/16`. Tạo đầy đủ các tài nguyên mạng bao gồm Internet Gateway, NAT Gateway để đảm bảo định tuyến cho các container trong vùng Private Subnet ra ngoài Internet tải packages hoặc kéo images.
+* Khởi tạo một VPC tùy chỉnh có tên là `FCJ-Lab-vpc` với dải CIDR `10.0.0.0/16`.
+* Tạo đầy đủ các tài nguyên mạng bao gồm Internet Gateway, NAT Gateway để đảm bảo định tuyến cho các container trong vùng Private Subnet ra ngoài Internet tải packages hoặc kéo images.
 
 ###### 2.2 Tạo CodeDeploy Role
-Tạo một IAM Role dành riêng cho AWS CodeDeploy với policy `AWSCodeDeployRoleForECS` để cấp quyền cho CodeDeploy thực hiện điều phối lưu lượng (traffic shifting) giữa Target Group Blue và Target Group Green trong quá trình cập nhật phiên bản ứng dụng.
+* Tạo một IAM Role dành riêng cho AWS CodeDeploy với policy `AWSCodeDeployRoleForECS` để cấp quyền cho CodeDeploy thực hiện điều phối lưu lượng (traffic shifting) giữa Target Group Blue và Target Group Green trong quá trình cập nhật phiên bản ứng dụng.
+* Thiết lập chính sách quan hệ tin cậy cho dịch vụ CodeDeploy:
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "",
+      "Effect": "Allow",
+      "Principal": { "Service": "codedeploy.amazonaws.com" },
+      "Action": "sts:AssumeRole"
+    }
+  ]
+}
+```
+* Minh chứng khởi tạo CodeDeploy Role trên Console:
+
+![IAM Role CodeDeploy](/images/worklog/week-9/1_iam_role_codedeploy.png)
 
 ###### 2.3 Thêm Subnet
 Phân chia mạng VPC thành các Subnet Public và Private ở các Availability Zone khác nhau để tăng tính sẵn sàng (High Availability).
-* **Public Subnet 1 & 2** (dành cho Application Load Balancer)
-* **Private Subnet 1 & 2** (dành cho ECS Tasks chạy Backend/Frontend)
+* **Tên Subnet**: `FCJ-Lab-subnet-private3`
+  * IPv4 CIDR block của Subnet: `10.0.32.0/20`
+  * Availability Zone: ap-southeast-1a
+* **Tên Subnet**: `FCJ-Lab-subnet-private4`
+  * IPv4 CIDR block của Subnet: `10.0.64.0/20`
+  * Availability Zone: ap-southeast-1b
+* Minh chứng danh sách Subnets được khởi tạo trong VPC của Lab:
+
+![VPC Subnets](/images/worklog/week-9/1_vpc_subnets.png)
 
 ###### 2.4 Cấu hình NAT Gateway
-Khởi tạo NAT Gateway đặt tại vùng mạng Public Subnet, gán Elastic IP tĩnh để các ECS Tasks chạy trong vùng Private Subnets có thể kết nối ra ngoài Internet một cách an toàn mà không bị lộ địa chỉ IP nội bộ.
+* Khởi tạo NAT Gateway đặt tại vùng mạng Public Subnet, gán Elastic IP tĩnh để các ECS Tasks chạy trong vùng Private Subnets có thể kết nối ra ngoài Internet một cách an toàn mà không bị lộ địa chỉ IP nội bộ.
 
 ###### 2.5 Cấu hình Route Table
 Cấu hình bảng định tuyến:
@@ -90,10 +115,26 @@ docker push <username>/ecs-frontend:latest
 ```
 
 ##### 4. Đăng ký Namespace trong AWS Cloud Map
-Cấu hình **AWS Cloud Map** để kích hoạt tính năng phát hiện dịch vụ (Service Discovery). Đăng ký một namespace riêng tư (ví dụ: `ecs-app.local`) gắn vào VPC để các ECS Tasks có thể tự động tìm thấy nhau qua tên miền nội bộ thay vì sử dụng IP động.
+Cấu hình **AWS Cloud Map** để kích hoạt tính năng phát hiện dịch vụ (Service Discovery). Đăng ký một namespace riêng tư `fcjresbar.internal` gắn vào VPC để các ECS Tasks có thể tự động tìm thấy nhau qua tên miền nội bộ thay vì sử dụng IP động.
+* Log CLI đăng ký thành công Cloud Map Namespace:
+```json
+[
+    {
+        "Id": "ns-xpmew7oos26x4as6",
+        "Arn": "arn:aws:servicediscovery:ap-southeast-1:938834038589:namespace/ns-xpmew7oos26x4as6",
+        "Name": "fcjresbar.internal",
+        "Type": "DNS_PRIVATE",
+        "Description": "Private DNS for ECS Tasks"
+    }
+]
+```
 
 ##### 5. Khởi tạo ECS Cluster
-Truy cập Amazon ECS Console, thực hiện tạo một ECS Cluster mới với tên là `ECS-App-Cluster`. Sử dụng tùy chọn hạ tầng là **Fargate** để tận dụng mô hình Serverless giúp giảm tải việc quản lý máy chủ EC2.
+* Truy cập Amazon ECS Console, thực hiện tạo một ECS Cluster mới với tên là `FCJ-Lab-cluster`.
+* Sử dụng tùy chọn hạ tầng là **Fargate** để tận dụng mô hình Serverless giúp giảm tải việc quản lý máy chủ EC2.
+* Minh chứng ECS Cluster đã hoạt động trên ECS Console:
+
+![ECS Cluster](/images/worklog/week-9/1_ecs_cluster.png)
 
 ##### 6. Thiết lập ECS Task Definition
 Task Definition là bản thiết kế (blueprint) mô tả container sẽ chạy như thế nào (CPU, RAM, Image link, Environment variables, Log configuration).
@@ -110,7 +151,7 @@ Task Definition là bản thiết kế (blueprint) mô tả container sẽ chạ
 * **CPU / Memory**: `0.25 vCPU / 0.5 GB RAM`
 * **Container Image**: Đường dẫn ECR hoặc Docker Hub Image frontend.
 * **Port Mapping**: Cấu hình cổng `80` hoặc `3000` tùy theo thiết kế ứng dụng.
-* **Environment Variable**: Cấu hình biến môi trường trỏ API endpoint về địa chỉ của Backend (thông qua DNS Cloud Map hoặc Load Balancer).
+* **Environment Variable**: Cấu hình biến môi trường trỏ API endpoint về địa chỉ của Backend (thông qua DNS Cloud Map: `backend.fcjresbar.internal`).
 
 ##### 7. Cấu hình Application Load Balancer
 

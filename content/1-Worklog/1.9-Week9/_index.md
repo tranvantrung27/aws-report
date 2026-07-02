@@ -43,18 +43,43 @@ In this lab, we containerize our multi-tier application and deploy it onto **Ama
 ##### 2. Preparation
 
 ###### 2.1 Infrastructure Configuration
-Create a custom VPC named `ECS-VPC` with CIDR `10.0.0.0/16`. Set up all networking components including an Internet Gateway and a NAT Gateway to allow tasks in Private Subnets to pull base Docker images and packages from the internet.
+* Created a custom VPC named `FCJ-Lab-vpc` with CIDR block `10.0.0.0/16`.
+* Set up all networking components including an Internet Gateway and a NAT Gateway to allow tasks in Private Subnets to pull base Docker images and packages from the internet.
 
 ###### 2.2 Create CodeDeploy Role
-Create a specific IAM Role for AWS CodeDeploy with the `AWSCodeDeployRoleForECS` managed policy. This role permits CodeDeploy to manage target group traffic redirection during Blue/Green deployments.
+* Created an IAM Role named `ECS-CodeDeploy-Role` specifically for AWS CodeDeploy with the `AWSCodeDeployRoleForECS` policy.
+* Configured the following trust relationship document:
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "",
+      "Effect": "Allow",
+      "Principal": { "Service": "codedeploy.amazonaws.com" },
+      "Action": "sts:AssumeRole"
+    }
+  ]
+}
+```
+* Verified IAM Role trust relationships configuration on the console:
+
+![IAM Role CodeDeploy](/images/worklog/week-9/1_iam_role_codedeploy.png)
 
 ###### 2.3 Add Subnet
-Divide the VPC into Public and Private subnets across multiple Availability Zones for high availability:
-* **Public Subnet 1 & 2** (for the Application Load Balancer)
-* **Private Subnet 1 & 2** (for the ECS Fargate tasks)
+Divided the VPC into Public and Private subnets across multiple Availability Zones for high availability:
+* **Subnet Name**: `FCJ-Lab-subnet-private3`
+  * IPv4 CIDR block: `10.0.32.0/20`
+  * Availability Zone: ap-southeast-1a
+* **Subnet Name**: `FCJ-Lab-subnet-private4`
+  * IPv4 CIDR block: `10.0.64.0/20`
+  * Availability Zone: ap-southeast-1b
+* Verified subnet configurations on the console:
+
+![VPC Subnets](/images/worklog/week-9/1_vpc_subnets.png)
 
 ###### 2.4 Configure NAT Gateway
-Create a NAT Gateway inside the Public Subnet, allocate an Elastic IP, and configure routing so tasks in the Private Subnets can securely access external endpoints.
+* Created a NAT Gateway inside the Public Subnet, allocated an Elastic IP, and configured routing so tasks in the Private Subnets can securely access external endpoints.
 
 ###### 2.5 Configure Route Table
 Configure routing rules:
@@ -90,10 +115,26 @@ docker push <username>/ecs-frontend:latest
 ```
 
 ##### 4. Register namespace in Cloud Map
-Set up **AWS Cloud Map** for private Service Discovery. Register a namespace (e.g., `ecs-app.local`) inside the VPC so ECS tasks can locate each other using internal DNS names instead of dynamic IP addresses.
+Set up **AWS Cloud Map** for private Service Discovery. Registered a namespace named `fcjresbar.internal` inside the VPC so ECS tasks can locate each other using internal DNS names.
+* CLI Log output verifying successful registration:
+```json
+[
+    {
+        "Id": "ns-xpmew7oos26x4as6",
+        "Arn": "arn:aws:servicediscovery:ap-southeast-1:938834038589:namespace/ns-xpmew7oos26x4as6",
+        "Name": "fcjresbar.internal",
+        "Type": "DNS_PRIVATE",
+        "Description": "Private DNS for ECS Tasks"
+    }
+]
+```
 
 ##### 5. Create ECS Cluster
-Navigate to the Amazon ECS Console and create a cluster named `ECS-App-Cluster`. Specify **Fargate** as the infrastructure provider to leverage serverless container execution.
+* Navigate to the Amazon ECS Console and create a cluster named `FCJ-Lab-cluster`.
+* Specified **Fargate** as the infrastructure provider to leverage serverless container execution.
+* Verified active ECS Cluster on the console:
+
+![ECS Cluster](/images/worklog/week-9/1_ecs_cluster.png)
 
 ##### 6. Create ECS Task Definition
 Define Task Definitions describing the blueprint of containers (CPU, RAM, container image, environment variables, logs configuration).
@@ -110,7 +151,7 @@ Define Task Definitions describing the blueprint of containers (CPU, RAM, contai
 * **CPU / Memory**: `0.25 vCPU / 0.5 GB RAM`
 * **Container Image**: ECR or Docker Hub frontend URI.
 * **Port Mapping**: Map port `80` or `3000` for client access.
-* **Environment Variables**: Configure the API URL pointing to the backend's DNS address in Cloud Map or ALB.
+* **Environment Variables**: Configure the API URL pointing to the backend's DNS address in Cloud Map: `backend.fcjresbar.internal`.
 
 ##### 7. Configure Application Load Balancer
 
@@ -146,7 +187,15 @@ This configuration guarantees that healthy tasks remain active while replacement
 * Perform a dummy code update, trigger a CodeDeploy deployment, and verify that traffic transitions smoothly from Blue to Green.
 
 ##### 10. Clean Up Resources
-Delete ECS Services, delete the ECS Cluster, release Application Load Balancers, delete target groups, NAT Gateways, and release Elastic IPs to stop billing.
+Cleaned up all services to prevent costs:
+```bash
+aws ecs delete-cluster --cluster "FCJ-Lab-cluster"
+aws servicediscovery delete-namespace --id "ns-xpmew7oos26x4as6"
+aws iam delete-role --role-name ECS-CodeDeploy-Role
+aws ec2 delete-subnet --subnet-id <PrivateSubnet3>
+aws ec2 delete-subnet --subnet-id <PrivateSubnet4>
+aws ec2 delete-vpc --vpc-id <VpcId>
+```
 
 ---
 
