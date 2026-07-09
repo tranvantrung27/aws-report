@@ -82,16 +82,46 @@ Thực hành xây dựng hệ thống CI/CD hoàn chỉnh sử dụng các dịc
   * `scripts/install_dependencies`: File script shell cài đặt gói dịch vụ `httpd` (Apache) trước khi cài ứng dụng.
 * Đẩy mã nguồn từ máy local lên GitHub thành công.
 
-###### **Bước 4: Cấu hình AWS CodeBuild (Đang tiến hành)**
-* Tạo Build project. Định nghĩa các tập lệnh build (`buildspec.yml`) để đóng gói ứng dụng.
+###### **Bước 4: Cấu hình AWS CodeBuild (Hoàn thành)**
+* **Kết nối GitHub với CodeBuild:**
+  * Truy cập dịch vụ CodeBuild tại region `ap-southeast-1` (Singapore).
+  * Tạo Build project mới, chọn Source provider là **GitHub**.
+  * AWS yêu cầu xác thực GitHub OAuth - đăng nhập tài khoản GitHub `tranvantrung27` và cấp quyền (Authorize) cho AWS CodeBuild truy cập repository.
+  * Xác thực 2 lớp (2FA) trên GitHub qua thiết bị di động thành công.
+  * Kết nối GitHub OAuth thành công, CodeBuild nhận diện được tài khoản và repository.
 
-###### **Bước 5: Cấu hình AWS CodeDeploy (Sắp tiến hành)**
-* Tạo Application và Deployment Group.
-* Định nghĩa file `appspec.yml` cho các scripts pre-install, install, và start trên EC2.
+* **Tạo Build Project `AWS-FCJ-APP` thành công:**
+  * **Source provider:** GitHub
+  * **Repository:** `https://github.com/tranvantrung27/aws-fcj-pipeline.git` (sử dụng GitHub repository vừa tạo ở bước 3)
+  * **Environment:**
+    * Operating System: Amazon Linux
+    * Runtime: Standard
+    * Image: `aws/codebuild/amazonlinux-x86_64-standard:5.0` (Standard Image 5.0)
+    * Service role: Sử dụng role đã được tạo tự động `codebuild-AWS-FCJ-APP-service-role`
+  * **Buildspec:** Sử dụng file `buildspec.yml` có sẵn trong mã nguồn
+  * **Artifacts:**
+    * Type: Amazon S3
+    * Bucket name: `aws-cicd-ec2-trantrung04`
+  * **Logs:**
+    * CloudWatch Logs: Enabled
+    * Group name: `aws-cicd-ec2-group`
+    * Stream name: `aws-cicd-ec2-stream`
+  * Project tạo thành công, Configuration hiển thị đầy đủ thông tin trên Console.
+  <!-- ![CodeBuild Project Created](/images/worklog/week-11/9_codebuild_project_created.png) -->
 
-###### **Bước 6: Tự động hóa bằng AWS CodePipeline (Sắp tiến hành)**
-* Tạo Pipeline kết nối Source (GitHub) -> Build (CodeBuild) -> Deploy (CodeDeploy).
+###### **Bước 5: Cấu hình AWS CodeDeploy (Đang chờ)**
+* Tạo Application tên `AWS-FCJ-APP` với Compute platform: **EC2/On-premises**.
+* Tạo Deployment Group tên `AWS-FCJ-DG`:
+  * Service Role: Role có policy `AWSCodeDeployRole` (đã tạo ở Bước 1: `CodeDeployServiceRoleEC2`).
+  * EC2 Instance: Chọn theo tag Key=`Name`, Value=`CodeDeployEC2`.
+  * Deployment Configuration: `CodeDeployDefault.OneAtATime`.
+  * Load Balancer: Disabled.
+* **Lưu ý:** Tại thời điểm thực hành, CodeDeploy Console bị chuyển hướng sang trang "Complete your account setup" do tài khoản AWS đang trong quá trình xác minh. Cần chờ xác minh hoàn tất để tiếp tục.
+
+###### **Bước 6: Tự động hóa bằng AWS CodePipeline (Đang chờ)**
+* Tạo Pipeline kết nối: Source (GitHub `tranvantrung27/aws-fcj-pipeline`) -> Build (CodeBuild `AWS-FCJ-APP`) -> Deploy (CodeDeploy `AWS-FCJ-APP` / `AWS-FCJ-DG`).
 * Kiểm thử quá trình tự động triển khai khi có commit mới.
+* CodePipeline Console đã truy cập thành công (Pipelines page hiển thị trống, chưa có pipeline nào).
 
 
 #### Using File Storage Gateway

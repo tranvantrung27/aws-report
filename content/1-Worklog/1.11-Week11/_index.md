@@ -82,16 +82,46 @@ Practice building a complete CI/CD system using AWS Developer Tools to automatic
   * `scripts/install_dependencies`: Shell script to install `httpd` (Apache server) prior to app deployment.
 * Pushed all project source files successfully to GitHub.
 
-###### **Step 4: AWS CodeBuild (In Progress)**
-* Create a Build project. Define the build scripts (`buildspec.yml`) to package the application.
+###### **Step 4: AWS CodeBuild (Completed)**
+* **Connect GitHub to CodeBuild:**
+  * Access CodeBuild service in `ap-southeast-1` (Singapore) region.
+  * Create a new Build project, select Source provider as **GitHub**.
+  * AWS requires GitHub OAuth authentication - log in to GitHub account `tranvantrung27` and authorize AWS CodeBuild to access the repository.
+  * Two-factor authentication (2FA) on GitHub via mobile device completed successfully.
+  * GitHub OAuth connection successful, CodeBuild recognizes the account and repository.
 
-###### **Step 5: AWS CodeDeploy (Upcoming)**
-* Create an Application and Deployment Group.
-* Define the `appspec.yml` file for pre-install, install, and start scripts on EC2.
+* **Build Project `AWS-FCJ-APP` created successfully:**
+  * **Source provider:** GitHub
+  * **Repository:** `https://github.com/tranvantrung27/aws-fcj-pipeline.git` (using the GitHub repository created in Step 3)
+  * **Environment:**
+    * Operating System: Amazon Linux
+    * Runtime: Standard
+    * Image: `aws/codebuild/amazonlinux-x86_64-standard:5.0` (Standard Image 5.0)
+    * Service role: Using the automatically created role `codebuild-AWS-FCJ-APP-service-role`
+  * **Buildspec:** Uses the `buildspec.yml` file from the source code
+  * **Artifacts:**
+    * Type: Amazon S3
+    * Bucket name: `aws-cicd-ec2-trantrung04`
+  * **Logs:**
+    * CloudWatch Logs: Enabled
+    * Group name: `aws-cicd-ec2-group`
+    * Stream name: `aws-cicd-ec2-stream`
+  * Project created successfully, Configuration displayed in full on the Console.
+  <!-- ![CodeBuild Project Created](/images/worklog/week-11/9_codebuild_project_created.png) -->
 
-###### **Step 6: AWS CodePipeline (Upcoming)**
-* Create a Pipeline connecting Source (GitHub) -> Build (CodeBuild) -> Deploy (CodeDeploy).
+###### **Step 5: AWS CodeDeploy (Pending)**
+* Create Application named `AWS-FCJ-APP` with Compute platform: **EC2/On-premises**.
+* Create Deployment Group named `AWS-FCJ-DG`:
+  * Service Role: Role with `AWSCodeDeployRole` policy (created in Step 1: `CodeDeployServiceRoleEC2`).
+  * EC2 Instance: Select by tag Key=`Name`, Value=`CodeDeployEC2`.
+  * Deployment Configuration: `CodeDeployDefault.OneAtATime`.
+  * Load Balancer: Disabled.
+* **Note:** At the time of this lab, the CodeDeploy Console redirects to the "Complete your account setup" page because the AWS account verification is still in progress. Need to wait for verification to complete before continuing.
+
+###### **Step 6: AWS CodePipeline (Pending)**
+* Create a Pipeline connecting: Source (GitHub `tranvantrung27/aws-fcj-pipeline`) -> Build (CodeBuild `AWS-FCJ-APP`) -> Deploy (CodeDeploy `AWS-FCJ-APP` / `AWS-FCJ-DG`).
 * Test the automated deployment process when a new commit is pushed.
+* CodePipeline Console accessed successfully (Pipelines page shows empty, no pipelines created yet).
 
 
 #### Using File Storage Gateway
