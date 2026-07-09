@@ -152,28 +152,68 @@ Practice creating a File Storage Gateway to connect local on-premises storage to
 Use AWS WAF to protect web applications from common network attacks (like SQL Injection, Cross-Site Scripting) and manage traffic based on custom rules (IP, geolocation).
 
 ##### 2. Implementation Steps
-* **Step 1: Deploy the sample Web App**
-  * Launch a sample Web Application via CloudFormation or manually deploy it as the target for the WAF.
-* **Step 2: Web ACLs with managed rules**
-  * Access AWS WAF and create a Web ACL (Access Control List).
-  * Add AWS **Managed Rules** (e.g., *AWSManagedRulesCommonRuleSet*) to protect against common threats.
-* **Step 3: Custom Rules**
-  * Create basic and advanced **Custom Rules** to block requests from specific IP addresses or countries.
-* **Step 4: Testing and Logging**
-  * Attempt to access the website using a blocked IP to receive a `403 Forbidden` error.
-  * Enable Logging to monitor blocked or allowed requests.
+###### **Step 1: Deploy the sample Web App**
+* Launch the `WAFSampleWebApp` EC2 instance to host the **AWS WAF Security Dashboard** web application.
+* The web app successfully displays security status when accessed via the EC2 instance's public IP address:
+![Web App Deployed Success](/images/worklog/week-11/15_deploy_web_app_success.png)
+
+###### **Step 2: Create Web ACL and IP Set (BlacklistIP)**
+* Create an **IP Set** named `BlacklistIP` in the `ap-southeast-1` region containing the IP address to be blocked (e.g., the user's personal public IP `115.73.31.31/32` for test verification).
+![IP Set Added Personal IP](/images/worklog/week-11/19_ip_set_added_personal_ip.png)
+* Initialize a **Web ACL** named `WAFWebACL` in the Singapore region:
+![Create Web ACL Success](/images/worklog/week-11/16_create_web_acl_success.png)
+
+###### **Step 3: Add Custom Rule to Block IP Set**
+* Add a custom rule named `BlockIPSetRule` linked to the `BlacklistIP` IP Set to perform a **Block** action on all traffic coming from these IP addresses.
+![Add Custom Rule Success](/images/worklog/week-11/18_add_custom_rule_success.png)
+
+###### **Step 4: Configure Application Load Balancer (ALB)**
+* Since AWS WAF cannot be attached directly to an EC2 instance, create a **Target Group** named `waftg` targeting port 80 of the `WAFSampleWebApp` instance.
+* Launch an Internet-facing **Application Load Balancer** named `WAF-ALB` operating in 2 Availability Zones (`ap-southeast-1a`, `ap-southeast-1b`) and forwarding traffic to `waftg`.
+![Create ALB Success](/images/worklog/week-11/20_create_alb_success.png)
+
+###### **Step 5: Associate WAF with Load Balancer**
+* Go to `WAFWebACL` -> **Associated AWS resources** tab -> Associate the newly created Application Load Balancer `WAF-ALB` to apply WAF protection rules.
+![Associate ALB to WAF](/images/worklog/week-11/21_associate_alb_to_waf.png)
+
+###### **Step 6: Test IP Blocking (Verify WAF Protection)**
+* Accessing the web application directly via the EC2 instance's Public IP remains successful.
+* However, attempting to access it via the Load Balancer's DNS name: `http://WAF-ALB-508958680.ap-southeast-1.elb.amazonaws.com`
+* The request is instantly identified and blocked by AWS WAF, returning a **`HTTP 403 Forbidden`** error:
+```bash
+$ curl -I http://WAF-ALB-508958680.ap-southeast-1.elb.amazonaws.com
+HTTP/1.1 403 Forbidden
+Server: awselb/2.0
+Date: Thu, 09 Jul 2026 15:37:41 GMT
+Content-Type: text/html
+Content-Length: 134
+Connection: keep-alive
+```
 
 #### Manage Resources Using Tags and Resource Groups
 ##### 1. Introduction
 Practice assigning Tags to resources for easier classification, cost management, and create Resource Groups to group resources together for operational and monitoring purposes.
 
-##### 2. Implementation Steps
-* **Step 1: Using Tags on Console**
-  * Launch a resource (e.g., an EC2 instance) and assign tags like `Environment: Dev`, `Project: Workshop`.
-  * Manage (add/remove) tags for multiple resources simultaneously.
-* **Step 2: Filter resources by tag**
-  * Use the Tag Editor tool to find all resources sharing a specific Tag.
-* **Step 3: Using tags with CLI**
-  * Use AWS CLI commands (e.g., `aws ec2 create-tags`) to assign tags or query resources directly from the terminal.
-* **Step 4: Create a Resource Group**
-  * Create a Tag-based Resource Group to automatically group all resources that satisfy the Tag conditions, making centralized management easier.
+##### 2. Detailed Implementation Steps
+###### **Step 1: Assign Tags to the EC2 Instance**
+* Go to the EC2 Management Console -> Select the `WAFSampleWebApp` instance -> Click the **Tags** tab -> Select **Manage tags**.
+* Add the following new tags to classify the resources used in the workshop:
+  * Key: `Environment` | Value: `Workshop`
+  * Key: `Project` | Value: `WAF`
+* Click **Save** to apply the tags. The console confirms successful tag updates:
+![EC2 Tags Saved Success](/images/worklog/week-11/22_ec2_tags_saved_success.png)
+
+###### **Step 2: Initialize a Tag-based Resource Group**
+* Go to the **AWS Resource Groups & Tag Editor** service -> Select **Create resource group**.
+* Configure the grouping parameters as follows:
+  * **Group type:** Select `Tag based`
+  * **Grouping criteria:**
+    * **Resource types:** Leave blank or select `All supported resource types` to include all resource categories.
+    * **Tags:** Enter the Tag Key `Environment` and Tag Value `Workshop` -> Click **Add**.
+* Click **Preview group resources** to let the system scan for matching resources. The scanner successfully displays 1 EC2 instance `WAFSampleWebApp` (ID: `i-0295122e688cbab63`).
+* **Group details:**
+  * **Group name:** Enter `WAF-Workshop-Resources`.
+  * **Group description:** `Resource Group for WAF Workshop Lab 27`.
+* Click **Create group** to complete the setup. The system confirms successful creation of the Resource Group:
+![Resource Group Created Success](/images/worklog/week-11/23_resource_group_created_success.png)
+

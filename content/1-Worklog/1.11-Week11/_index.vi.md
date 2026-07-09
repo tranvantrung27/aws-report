@@ -152,28 +152,67 @@ Thực hành tạo File Storage Gateway để kết nối dữ liệu từ môi 
 Sử dụng AWS WAF để bảo vệ ứng dụng web khỏi các cuộc tấn công mạng phổ biến (như SQL Injection, Cross-Site Scripting) và quản lý lưu lượng truy cập dựa trên các quy tắc tùy chỉnh (IP, vị trí địa lý).
 
 ##### 2. Các bước triển khai
-* **Bước 1: Triển khai ứng dụng Web mẫu**
-  * Khởi tạo một Web Application mẫu thông qua CloudFormation hoặc triển khai thủ công để làm mục tiêu gắn WAF.
-* **Bước 2: Thiết lập Web ACLs với Managed Rules**
-  * Truy cập AWS WAF, tạo một Web ACL (Access Control List).
-  * Thêm các quy tắc quản lý sẵn của AWS (**Managed Rules**) như *AWSManagedRulesCommonRuleSet* để bảo vệ khỏi các rủi ro thông dụng.
-* **Bước 3: Tạo Custom Rules**
-  * Tạo các **Custom Rules** cơ bản và nâng cao để chặn (Block) truy cập từ một địa chỉ IP hoặc quốc gia cụ thể.
-* **Bước 4: Kiểm thử và Logging**
-  * Truy cập thử vào trang web bằng IP bị cấm để nhận lỗi `403 Forbidden`.
-  * Kích hoạt Logging để giám sát các requests bị chặn hoặc cho phép.
+###### **Bước 1: Triển khai ứng dụng Web mẫu**
+* Khởi chạy máy ảo EC2 `WAFSampleWebApp` để chạy ứng dụng mẫu **AWS WAF Security Dashboard**.
+* Ứng dụng web hiển thị trực quan thông tin bảo mật tại địa chỉ IP Public của máy ảo:
+![Web App Deployed Success](/images/worklog/week-11/15_deploy_web_app_success.png)
+
+###### **Bước 2: Thiết lập Web ACL và IP Set (BlacklistIP)**
+* Tạo **IP Set** tên là `BlacklistIP` ở region `ap-southeast-1` chứa địa chỉ IP cần chặn (ví dụ IP Public cá nhân của người dùng `115.73.31.31/32` để kiểm thử thực tế).
+![IP Set Added Personal IP](/images/worklog/week-11/19_ip_set_added_personal_ip.png)
+* Khởi tạo **Web ACL** mang tên `WAFWebACL` tại Singapore region để áp dụng các bộ lọc:
+![Create Web ACL Success](/images/worklog/week-11/16_create_web_acl_success.png)
+
+###### **Bước 3: Tạo Custom Rule chặn IP Set**
+* Tạo Custom Rule tên là `BlockIPSetRule` liên kết với IP Set `BlacklistIP` nhằm thực hiện hành động chặn (**Block**) tất cả lưu lượng gửi từ các IP này.
+![Add Custom Rule Success](/images/worklog/week-11/18_add_custom_rule_success.png)
+
+###### **Bước 4: Cấu hình Application Load Balancer (ALB)**
+* Do AWS WAF không thể gán trực tiếp lên EC2, tiến hành tạo một **Target Group** tên là `waftg` liên kết cổng 80 của máy ảo `WAFSampleWebApp`.
+* Khởi tạo **Application Load Balancer** tên là `WAF-ALB` (chế độ Internet-facing) hoạt động ở 2 Availability Zones (`ap-southeast-1a`, `ap-southeast-1b`) và chuyển tiếp traffic về `waftg`.
+![Create ALB Success](/images/worklog/week-11/20_create_alb_success.png)
+
+###### **Bước 5: Liên kết WAF với Load Balancer**
+* Truy cập Web ACL `WAFWebACL` -> Tab **Associated AWS resources** -> Gán tài nguyên Application Load Balancer `WAF-ALB` vừa khởi tạo.
+![Associate ALB to WAF](/images/worklog/week-11/21_associate_alb_to_waf.png)
+
+###### **Bước 6: Kiểm thử chặn IP thực tế (Testing WAF)**
+* Khi truy cập trực tiếp qua IP Public của EC2, ứng dụng vẫn hoạt động bình thường.
+* Tuy nhiên, khi truy cập thông qua DNS Name của Application Load Balancer: `http://WAF-ALB-508958680.ap-southeast-1.elb.amazonaws.com`
+* Hệ thống lập tức nhận diện IP thuộc Blacklist và chặn truy cập, trả về mã lỗi **`HTTP 403 Forbidden`** chính xác:
+```bash
+$ curl -I http://WAF-ALB-508958680.ap-southeast-1.elb.amazonaws.com
+HTTP/1.1 403 Forbidden
+Server: awselb/2.0
+Date: Thu, 09 Jul 2026 15:37:41 GMT
+Content-Type: text/html
+Content-Length: 134
+Connection: keep-alive
+```
 
 #### Manage Resources Using Tags and Resource Groups
 ##### 1. Giới thiệu
 Thực hành gắn thẻ (Tags) cho tài nguyên để dễ dàng phân loại, quản lý chi phí và tạo Resource Groups nhằm nhóm các tài nguyên lại với nhau cho mục đích vận hành, giám sát.
 
-##### 2. Các bước triển khai
-* **Bước 1: Sử dụng Tags trên AWS Console**
-  * Khởi tạo một tài nguyên (ví dụ: EC2 instance) và gắn các tag như `Environment: Dev`, `Project: Workshop`.
-  * Quản lý (thêm/xóa) tags cho nhiều tài nguyên cùng lúc.
-* **Bước 2: Filter tài nguyên theo Tag**
-  * Sử dụng công cụ Tag Editor để tìm kiếm tất cả các tài nguyên có chung một Tag cụ thể.
-* **Bước 3: Sử dụng CLI để quản lý Tag**
-  * Dùng lệnh AWS CLI (vd: `aws ec2 create-tags`) để gắn thẻ hoặc truy vấn tài nguyên trực tiếp từ terminal.
-* **Bước 4: Tạo Resource Group**
-  * Tạo một Resource Group (Tag-based) để tự động nhóm tất cả các tài nguyên thỏa mãn điều kiện Tag, giúp dễ dàng quản lý tập trung.
+##### 2. Các bước triển khai thực tế
+###### **Bước 1: Gán thẻ (Tags) cho tài nguyên EC2 Instance**
+* Truy cập trang quản lý máy ảo EC2 Console -> Chọn máy ảo `WAFSampleWebApp` -> Tab **Tags** -> Click chọn **Manage tags**.
+* Tiến hành bổ sung thêm các thẻ Tag mới để phân loại môi trường chạy Workshop:
+  * Key: `Environment` | Value: `Workshop`
+  * Key: `Project` | Value: `WAF`
+* Bấm **Save** để lưu lại các tags. Hệ thống xác nhận lưu thành công:
+![EC2 Tags Saved Success](/images/worklog/week-11/22_ec2_tags_saved_success.png)
+
+###### **Bước 2: Khởi tạo Tag-based Resource Group**
+* Truy cập dịch vụ **AWS Resource Groups & Tag Editor** -> Chọn **Create resource group**.
+* Cấu hình các thông số nhóm tài nguyên như sau:
+  * **Group type:** Chọn `Tag based`
+  * **Grouping criteria:**
+    * **Resource types:** Để trống hoặc chọn `All supported resource types` để quét tất cả tài nguyên.
+    * **Tags:** Điền Tag Key `Environment` và Tag Value `Workshop` -> Bấm **Add**.
+* Bấm nút **Preview group resources** để hệ thống quét trước tài nguyên. Kết quả hiển thị chính xác 1 máy ảo EC2 `WAFSampleWebApp` (ID: `i-0295122e688cbab63`) phù hợp với tag lọc.
+* **Group details:**
+  * **Group name:** Đặt tên group là `WAF-Workshop-Resources`.
+  * **Group description:** `Resource Group for WAF Workshop Lab 27`.
+* Bấm **Create group** để tạo nhóm tài nguyên. Hệ thống phản hồi tạo thành công và gom nhóm EC2:
+![Resource Group Created Success](/images/worklog/week-11/23_resource_group_created_success.png)
