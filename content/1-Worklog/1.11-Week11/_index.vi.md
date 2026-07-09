@@ -128,19 +128,24 @@ Thực hành xây dựng hệ thống CI/CD hoàn chỉnh sử dụng các dịc
 ##### 1. Giới thiệu
 Thực hành tạo File Storage Gateway để kết nối dữ liệu từ môi trường lưu trữ cục bộ (On-premises) lên Amazon S3 thông qua giao thức truyền thống như NFS/SMB.
 
-##### 2. Các bước triển khai
-* **Bước 1: Chuẩn bị tài nguyên**
-  * Tạo một S3 bucket dùng làm nơi lưu trữ dữ liệu backend.
-  * Khởi tạo máy chủ EC2 đóng vai trò là Storage Gateway appliance (mô phỏng máy chủ tại môi trường On-premises).
-* **Bước 2: Khởi tạo Storage Gateway**
-  * Truy cập AWS Storage Gateway Console, tạo gateway mới thuộc loại **Amazon S3 File Gateway**.
-  * Kết nối và kích hoạt gateway thông qua địa chỉ IP của máy chủ EC2.
-* **Bước 3: Tạo File Share**
-  * Cấu hình File Share liên kết Gateway với S3 bucket đã tạo. 
-  * Lấy lệnh mount (NFS/SMB) từ AWS Console.
-* **Bước 4: Mount File Share lên máy On-premises**
-  * Đăng nhập vào máy client.
-  * Thực thi lệnh mount thư mục được chia sẻ vào hệ thống tệp cục bộ và kiểm tra quá trình đồng bộ file tự động lên S3.
+##### 2. Các bước triển khai thực tế
+###### **Bước 1: Chuẩn bị tài nguyên (S3 & EC2)**
+* **Khởi tạo Amazon S3 Bucket:**
+  * Tạo một S3 bucket đặt tên là `s3-instancestoragegw-trantrung04` tại region `ap-southeast-1` (Singapore) làm nơi lưu trữ dữ liệu Backend.
+  ![S3 Storage Gateway Created](/images/worklog/week-11/s3_storagegw_created.png)
+* **Khởi chạy EC2 Storage Gateway Instance:**
+  * Khởi chạy một EC2 instance đóng vai trò là Storage Gateway Appliance (mô phỏng máy chủ tại môi trường On-premises).
+  * Tên Instance: `StorageGatewayInstance`.
+  * **AMI:** Sử dụng Community AMI tên là `aws-storage-gateway-FILE_S3-2.1.1` (Image ID: `ami-014cf7b9e443b99c8`).
+  * Do giới hạn tài khoản học viên, chọn Instance type: `t3.small`.
+  * Key pair: `fcj-key`.
+  * **Cấu hình Storage (Volumes):** Thêm ổ đĩa thứ hai (EBS Volume) dung lượng **`150 GiB`** (kiểu volume `gp3`) dùng làm Cache lưu trữ cho Gateway.
+  * Máy ảo khởi chạy thành công và chuyển sang trạng thái **Running**:
+  ![Launch Storage Gateway EC2 Success](/images/worklog/week-11/11_launch_storagegw_ec2_success.png)
+  ![Storage Gateway EC2 Running](/images/worklog/week-11/12_storagegw_ec2_running.png)
+
+###### **Bước 2: Thiết lập Storage Gateway (Đang chờ)**
+* **Lưu ý:** Khi chuyển tiếp sang giao diện dịch vụ **Storage Gateway Console** để tiến hành kết nối Gateway Appliance với AWS S3, hệ thống tự động chặn truy cập và yêu cầu xác minh tài khoản thanh toán (*Complete your account setup*). Các cấu hình tiếp theo (Kích hoạt gateway, tạo File Share và mount SMB/NFS lên client) tạm thời bị hoãn và sẽ được hoàn tất ngay khi tài khoản được AWS kích hoạt lại đầy đủ.
 
 #### AWS Web Application Firewall (WAF)
 ##### 1. Giới thiệu

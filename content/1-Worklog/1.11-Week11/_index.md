@@ -128,19 +128,24 @@ Practice building a complete CI/CD system using AWS Developer Tools to automatic
 ##### 1. Introduction
 Practice creating a File Storage Gateway to connect local on-premises storage to Amazon S3 via traditional protocols like NFS/SMB.
 
-##### 2. Implementation Steps
-* **Step 1: Preparation**
-  * Create an S3 bucket to serve as the backend storage.
-  * Launch an EC2 instance to act as the Storage Gateway appliance (simulating an on-premises server).
-* **Step 2: Create Storage Gateway**
-  * Access the AWS Storage Gateway Console and create a new gateway of type **Amazon S3 File Gateway**.
-  * Connect and activate the gateway using the IP address of the EC2 instance.
-* **Step 3: Create File Shares**
-  * Configure a File Share linking the Gateway to the created S3 bucket. 
-  * Obtain the mount command (NFS/SMB) from the AWS Console.
-* **Step 4: Mount File Share on On-premises machine**
-  * Log into the client machine.
-  * Execute the mount command to map the shared folder to the local file system and verify the automatic file synchronization to S3.
+##### 2. Practical Implementation Steps
+###### **Step 1: Resource Provisioning (S3 & EC2)**
+* **Create S3 Bucket:**
+  * Created an S3 bucket named `s3-instancestoragegw-trantrung04` in the `ap-southeast-1` (Singapore) region.
+  ![S3 Storage Gateway Created](/images/worklog/week-11/s3_storagegw_created.png)
+* **Launch EC2 Storage Gateway Instance:**
+  * Launched an EC2 instance to simulate the on-premises Storage Gateway Appliance.
+  * Instance Name: `StorageGatewayInstance`.
+  * **AMI:** Community AMI `aws-storage-gateway-FILE_S3-2.1.1` (Image ID: `ami-014cf7b9e443b99c8`).
+  * Due to student account limits, selected Instance type: `t3.small`.
+  * Key pair: `fcj-key`.
+  * **Storage (Volumes):** Added a second volume (EBS Volume) of **`150 GiB`** (`gp3` type) to serve as local cache storage.
+  * The EC2 instance successfully launched and reached **Running** state:
+  ![Launch Storage Gateway EC2 Success](/images/worklog/week-11/11_launch_storagegw_ec2_success.png)
+  ![Storage Gateway EC2 Running](/images/worklog/week-11/12_storagegw_ec2_running.png)
+
+###### **Step 2: Storage Gateway Configuration (Pending)**
+* **Note:** When proceeding to the **Storage Gateway Console** to connect the Gateway Appliance with AWS S3, the system blocked access with a "Complete your account setup" verification page. The remaining steps (activating the gateway, creating File Share, and mounting SMB/NFS) are pending and will be completed as soon as AWS support fully verifies the account.
 
 #### AWS Web Application Firewall (WAF)
 ##### 1. Introduction
