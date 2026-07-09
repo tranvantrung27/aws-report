@@ -8,46 +8,137 @@ pre: " <b> 1.11. </b> "
 
 ### Week 11 Objectives:
 
-* Connect and get acquainted with members of First Cloud Journey.
-* Understand basic AWS services, how to use the console & CLI.
+* Practice deploying a CI/CD pipeline using AWS CodePipeline, CodeCommit, CodeBuild, and CodeDeploy.
+* Understand and configure AWS File Storage Gateway to connect with on-premises environments.
+* Secure applications by configuring AWS Web Application Firewall (WAF).
+* Manage AWS resources efficiently using Tags and Resource Groups.
 
 ### Tasks to be carried out this week:
 | Day | Task                                                                                                                                                                                                   | Start Date | Completion Date | Reference Material                        |
 | --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------- | --------------- | ----------------------------------------- |
-| 2   | - Get acquainted with FCJ members <br> - Read and take note of internship unit rules and regulations                                                                                                   | 29/06/2026 | 29/06/2026 |
-| 3   | - Learn about AWS and its types of services <br>&emsp; + Compute <br>&emsp; + Storage <br>&emsp; + Networking <br>&emsp; + Database <br>&emsp; + ... <br>                                              | 30/06/2026 | 30/06/2026 | <https://cloudjourney.awsstudygroup.com/> |
-| 4   | - Create AWS Free Tier account <br> - Learn about AWS Console & AWS CLI <br> - **Practice:** <br>&emsp; + Create AWS account <br>&emsp; + Install & configure AWS CLI <br> &emsp; + How to use AWS CLI | 01/07/2026 | 01/07/2026 | <https://cloudjourney.awsstudygroup.com/> |
-| 5   | - Learn basic EC2: <br>&emsp; + Instance types <br>&emsp; + AMI <br>&emsp; + EBS <br>&emsp; + ... <br> - SSH connection methods to EC2 <br> - Learn about Elastic IP   <br>                            | 02/07/2026 | 02/07/2026 | <https://cloudjourney.awsstudygroup.com/> |
-| 6   | - **Practice:** <br>&emsp; + Launch an EC2 instance <br>&emsp; + Connect via SSH <br>&emsp; + Attach an EBS volume                                                                                     | 03/07/2026 | 03/07/2026 | <https://cloudjourney.awsstudygroup.com/> |
-| 7 - Sun | - **Advanced practice:** <br>&emsp; + Recreate the EC2 instance and configure the Security Group <br>&emsp; + Connect via SSH and install a Web Server (Apache/Nginx) <br>&emsp; + Deploy a simple website and access it through the Public IP | 04/07/2026 | 05/07/2026 | <https://cloudjourney.awsstudygroup.com/> |
+| 2   | - **Practice: Deploy applications to EC2 with AWS CodePipeline (Part 1)** <br>&emsp; + Preparation (S3, Git, IAM roles) <br>&emsp; + Launch EC2 and install CodeDeploy Agent | 29/06/2026 | 29/06/2026 | [AWS CodeDeploy Guide](https://docs.aws.amazon.com/codedeploy/latest/userguide/welcome.html) |
+| 3   | - **Practice: Deploy applications to EC2 with AWS CodePipeline (Part 2)** <br>&emsp; + Setup AWS CodeCommit, CodeBuild, CodeDeploy <br>&emsp; + Configure AWS CodePipeline for CI/CD automation | 30/06/2026 | 30/06/2026 | [AWS CodePipeline Guide](https://docs.aws.amazon.com/codepipeline/latest/userguide/welcome.html) |
+| 4   | - **Practice: Using File Storage Gateway** <br>&emsp; + Create S3 Bucket, EC2 for Storage Gateway <br>&emsp; + Initialize Storage Gateway and File Shares <br>&emsp; + Mount File shares on On-premises machine | 01/07/2026 | 01/07/2026 | [AWS Storage Gateway](https://docs.aws.amazon.com/storagegateway/latest/userguide/WhatIsStorageGateway.html) |
+| 5   | - **Practice: AWS Web Application Firewall (Part 1)** <br>&emsp; + Deploy the sample Web App <br>&emsp; + Use AWS WAF, configure Web ACLs and Managed rules | 02/07/2026 | 02/07/2026 | [AWS WAF Developer Guide](https://docs.aws.amazon.com/waf/latest/developerguide/waf-chapter.html) |
+| 6   | - **Practice: AWS Web Application Firewall (Part 2)** <br>&emsp; + Create Custom rules to block IP/Countries <br>&emsp; + Enable Logging and Testing | 03/07/2026 | 03/07/2026 | [AWS WAF Managed Rules](https://docs.aws.amazon.com/waf/latest/developerguide/aws-managed-rule-groups.html) |
+| 7 - Sun | - **Practice: Manage Resources Using Tags and Resource Groups** <br>&emsp; + Use Tags on Console and CLI <br>&emsp; + Create and manage Resource Groups | 04/07/2026 | 05/07/2026 | [Tagging AWS resources](https://docs.aws.amazon.com/tag-editor/latest/userguide/tagging.html) <br> [AWS Resource Groups](https://docs.aws.amazon.com/ARG/latest/userguide/welcome.html) |
 
 ### Week 11 Achievements:
 
-* Understood what AWS is and mastered the basic service groups: 
-  * Compute
-  * Storage
-  * Networking 
-  * Database
-  * ...
+* Mastered the CI/CD pipeline on AWS and integrated services like CodeCommit, CodeBuild, CodeDeploy, and CodePipeline to automate application deployments.
+* Successfully understood and configured AWS File Storage Gateway to connect on-premises storage to AWS S3.
+* Deployed AWS WAF to secure web applications against attacks using Web ACLs and custom rules.
+* Learned how to effectively organize and manage AWS resources using Tags and Resource Groups.
+* Successfully completed all 4 practical labs as guided.
 
-* Successfully created and configured an AWS Free Tier account.
+---
 
-* Became familiar with the AWS Management Console and learned how to find, access, and use services via the web interface.
+### Week 11 Practical Details:
 
-* Installed and configured AWS CLI on the computer, including:
-  * Access Key
-  * Secret Key
-  * Default Region
-  * ...
+#### Deploy applications to EC2 with AWS CodePipeline
 
-* Used AWS CLI to perform basic operations such as:
+##### 1. Introduction
+Practice building a complete CI/CD system using AWS Developer Tools to automatically deploy source code to EC2 instances. Instead of using CodeCommit (which is no longer available to new AWS accounts), this implementation integrates **GitHub** as the Source stage, coupled with **CodeBuild**, **CodeDeploy**, and orchestration managed by **CodePipeline**.
 
-  * Check account & configuration information
-  * Retrieve the list of regions
-  * View EC2 service
-  * Create and manage key pairs
-  * Check information about running services
-  * ...
+##### 2. Implementation Steps
+###### **Step 1: Preparation**
+* **Create S3 Bucket for Artifacts:**
+  * Create the S3 bucket and configure the Bucket Policy to allow access.
+  ![S3 Bucket Policy](/images/worklog/week-11/1_s3_bucket_policy.png)
+  ![S3 Bucket List](/images/worklog/week-11/2_s3_bucket_list.png)
+* **Create IAM Service Role for CodeDeploy:**
+  * Create the IAM role named `CodeDeployServiceRoleEC2` with the Trust Policy allowing CodeDeploy service actions and attach the `AWSCodeDeployRole` policy.
+  ![CodeDeploy Service Role](/images/worklog/week-11/4_codedeploy_service_role.png)
+* **Create IAM Instance Profile for EC2:**
+  * Create the IAM role named `EC2InstanceRoleForCodeDeployV2` with the use-case selected as **EC2** (to automatically generate a compatible Instance Profile).
+  * Attach permissions policies: `AmazonS3ReadOnlyAccess` and `AmazonSSMManagedInstanceCore` to allow the EC2 instance to read build files from S3 and connect securely via Systems Manager.
+  ![EC2 Instance Role V2](/images/worklog/week-11/6_create_role_v2_success.png)
 
-* Acquired the ability to connect between the web interface and CLI to manage AWS resources in parallel.
-* ...
+###### **Step 2: CodeDeploy Agent & Launch EC2**
+* Launch an EC2 instance with Amazon Linux 2023 OS in `ap-southeast-1` Singapore named `CodeDeployEC2`.
+* Link the created Instance Profile: `EC2InstanceRoleForCodeDeployV2`.
+* In the **User Data** section, input the shell script to automatically install and run the CodeDeploy Agent:
+  ```bash
+  #!/bin/bash
+  sudo yum update -y
+  sudo yum install -y ruby wget
+  cd /home/ec2-user
+  wget https://aws-codedeploy-ap-southeast-1.s3.ap-southeast-1.amazonaws.com/latest/install
+  chmod +x ./install
+  sudo ./install auto
+  sudo systemctl enable codedeploy-agent
+  sudo systemctl start codedeploy-agent
+  ```
+* EC2 instance successfully launched:
+  ![Launch EC2 Success](/images/worklog/week-11/7_launch_ec2_success.png)
+
+###### **Step 3: Setup Source Repository (GitHub)**
+* Instead of CodeCommit, initialize a new public GitHub repository named `aws-fcj-pipeline`.
+  ![GitHub Repo Created](/images/worklog/week-11/8_github_repo_success.png)
+* Set up local files and push them:
+  * `index.html`: Web page markup.
+  * `appspec.yml`: Dictates file copies and hook script execution for CodeDeploy.
+  * `buildspec.yml`: Outlines CodeBuild phases and artifacts collection.
+  * `scripts/install_dependencies`: Shell script to install `httpd` (Apache server) prior to app deployment.
+* Pushed all project source files successfully to GitHub.
+
+###### **Step 4: AWS CodeBuild (In Progress)**
+* Create a Build project. Define the build scripts (`buildspec.yml`) to package the application.
+
+###### **Step 5: AWS CodeDeploy (Upcoming)**
+* Create an Application and Deployment Group.
+* Define the `appspec.yml` file for pre-install, install, and start scripts on EC2.
+
+###### **Step 6: AWS CodePipeline (Upcoming)**
+* Create a Pipeline connecting Source (GitHub) -> Build (CodeBuild) -> Deploy (CodeDeploy).
+* Test the automated deployment process when a new commit is pushed.
+
+
+#### Using File Storage Gateway
+##### 1. Introduction
+Practice creating a File Storage Gateway to connect local on-premises storage to Amazon S3 via traditional protocols like NFS/SMB.
+
+##### 2. Implementation Steps
+* **Step 1: Preparation**
+  * Create an S3 bucket to serve as the backend storage.
+  * Launch an EC2 instance to act as the Storage Gateway appliance (simulating an on-premises server).
+* **Step 2: Create Storage Gateway**
+  * Access the AWS Storage Gateway Console and create a new gateway of type **Amazon S3 File Gateway**.
+  * Connect and activate the gateway using the IP address of the EC2 instance.
+* **Step 3: Create File Shares**
+  * Configure a File Share linking the Gateway to the created S3 bucket. 
+  * Obtain the mount command (NFS/SMB) from the AWS Console.
+* **Step 4: Mount File Share on On-premises machine**
+  * Log into the client machine.
+  * Execute the mount command to map the shared folder to the local file system and verify the automatic file synchronization to S3.
+
+#### AWS Web Application Firewall (WAF)
+##### 1. Introduction
+Use AWS WAF to protect web applications from common network attacks (like SQL Injection, Cross-Site Scripting) and manage traffic based on custom rules (IP, geolocation).
+
+##### 2. Implementation Steps
+* **Step 1: Deploy the sample Web App**
+  * Launch a sample Web Application via CloudFormation or manually deploy it as the target for the WAF.
+* **Step 2: Web ACLs with managed rules**
+  * Access AWS WAF and create a Web ACL (Access Control List).
+  * Add AWS **Managed Rules** (e.g., *AWSManagedRulesCommonRuleSet*) to protect against common threats.
+* **Step 3: Custom Rules**
+  * Create basic and advanced **Custom Rules** to block requests from specific IP addresses or countries.
+* **Step 4: Testing and Logging**
+  * Attempt to access the website using a blocked IP to receive a `403 Forbidden` error.
+  * Enable Logging to monitor blocked or allowed requests.
+
+#### Manage Resources Using Tags and Resource Groups
+##### 1. Introduction
+Practice assigning Tags to resources for easier classification, cost management, and create Resource Groups to group resources together for operational and monitoring purposes.
+
+##### 2. Implementation Steps
+* **Step 1: Using Tags on Console**
+  * Launch a resource (e.g., an EC2 instance) and assign tags like `Environment: Dev`, `Project: Workshop`.
+  * Manage (add/remove) tags for multiple resources simultaneously.
+* **Step 2: Filter resources by tag**
+  * Use the Tag Editor tool to find all resources sharing a specific Tag.
+* **Step 3: Using tags with CLI**
+  * Use AWS CLI commands (e.g., `aws ec2 create-tags`) to assign tags or query resources directly from the terminal.
+* **Step 4: Create a Resource Group**
+  * Create a Tag-based Resource Group to automatically group all resources that satisfy the Tag conditions, making centralized management easier.
