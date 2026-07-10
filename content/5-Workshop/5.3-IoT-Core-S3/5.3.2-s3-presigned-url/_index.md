@@ -65,7 +65,6 @@ An **S3 Presigned URL** completely solves this security vulnerability. It is a t
 #### 2. Workflow:
 {{< mermaid >}}
 sequenceDiagram
-    autonumber
     participant ESP32 as ESP32 Camera (IoT)
     participant API as Amazon API Gateway
     participant Lambda as AWS Lambda (Generator)
