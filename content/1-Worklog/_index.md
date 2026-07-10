@@ -28,6 +28,6 @@ pre: " <b> 1. </b> "
 
 **Week 10:** [VPC Peering, Transit Gateway, and AWS Lambda Automation](1.10-week10/)
 
-**Week 11:** [Doing task M...](1.11-week11/)
+**Week 11:** [CI/CD Pipeline, File Storage Gateway, AWS WAF and Resource Groups](1.11-week11/)
 
-**Week 12:** [Doing task N...](1.12-week12/)
+**Week 12:** [IAM Tag-based Access Control, Grafana, Permission Boundary and AWS Systems Manager](1.12-week12/)

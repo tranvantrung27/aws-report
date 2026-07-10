@@ -6,19 +6,28 @@ chapter: false
 pre: " <b> 5. </b> "
 ---
 
-# IoT Weather Platform — Hướng dẫn triển khai chi tiết
+# Hệ thống Parking IoT thông minh — Hướng dẫn triển khai chi tiết
 
 #### Tổng quan
 
-**IoT Weather Platform** là nền tảng giám sát thời tiết thời gian thực được xây dựng trên kiến trúc AWS Serverless dành cho nhóm *ITea Lab*. Hệ thống thu thập dữ liệu từ các trạm thời tiết sử dụng Raspberry Pi + ESP32, xử lý và lưu trữ qua các dịch vụ AWS, đồng thời trực quan hóa thông qua dashboard web.
+**Hệ thống Parking IoT thông minh** là một giải pháp tự động hóa quản lý bãi đỗ xe toàn diện được xây dựng trên kiến trúc **AWS Serverless**. Hệ thống kết hợp các thiết bị IoT biên (ESP32 Camera và cảm biến siêu âm) để nhận diện phương tiện ra/vào bãi đỗ, phát hiện trạng thái trống/đầy của các vị trí đỗ xe theo thời gian thực, lưu trữ và xử lý dữ liệu tự động, đồng thời cung cấp giao diện dashboard web và chatbot hỗ trợ AI.
 
-Trong phần này, chúng ta sẽ đi qua toàn bộ các bước triển khai hệ thống từ đầu đến cuối — từ cấu hình phần cứng biên, thiết lập hạ tầng AWS, đến giao diện web và kiểm thử.
+Trong phần Workshop này, chúng ta sẽ đi qua toàn bộ các bước triển khai hệ thống chi tiết từ đầu đến cuối — bao gồm cả cấu hình hạ tầng AWS, nạp code cho thiết bị phần cứng, xây dựng giao diện người dùng và thiết lập giám sát.
 
 #### Nội dung
 
-1. [Tổng quan về workshop](5.1-Workshop-overview/)
-2. [Chuẩn bị môi trường](5.2-Prerequiste/)
-3. [Thiết lập AWS IoT Core & S3 Data Lake](5.3-S3-vpc/)
-4. [Xử lý dữ liệu với AWS Glue](5.4-S3-onprem/)
-5. [Triển khai Web Dashboard với Amplify](5.5-Policy/)
-6. [Dọn dẹp tài nguyên](5.6-Cleanup/)
+1. [Tổng quan về workshop](5.1-workshop-overview/)
+2. [Chuẩn bị môi trường](5.2-prerequisite/)
+3. [AWS IoT Core & Amazon S3](5.3-iot-core-s3/)
+   * 3.1. [Cấu hình AWS IoT Core](5.3-iot-core-s3/5.3.1-iot-core-setup/)
+   * 3.2. [Tạo S3 Bucket & Presigned URL](5.3-iot-core-s3/5.3.2-s3-presigned-url/)
+4. [Lambda & Amazon Rekognition](5.4-lambda-rekognition/)
+   * 4.1. [Lambda xử lý ảnh](5.4-lambda-rekognition/5.4.1-lambda-image-processing/)
+   * 4.2. [Tích hợp Amazon Rekognition](5.4-lambda-rekognition/5.4.2-rekognition-integration/)
+   * 4.3. [Thiết kế DynamoDB Tables](5.4-lambda-rekognition/5.4.3-dynamodb-setup/)
+   * 4.4. [Kiểm thử luồng nhận diện](5.4-lambda-rekognition/5.4.4-end-to-end-test/)
+5. [API Gateway, Cognito & Bedrock](5.5-api-cognito-bedrock/)
+6. [Phần cứng ESP32](5.6-hardware-esp32/)
+7. [Web Dashboard](5.7-web-dashboard/)
+8. [Giám sát với CloudWatch](5.8-monitoring-cloudwatch/)
+9. [Dọn dẹp tài nguyên](5.9-cleanup/)

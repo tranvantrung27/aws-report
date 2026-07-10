@@ -6,116 +6,217 @@ chapter: false
 pre: " <b> 2. </b> "
 ---
 
-# Nền tảng IoT Giám sát Thời tiết Thời gian thực với AWS Serverless
+# Nền tảng Parking IoT thông minh với AWS Serverless
 
-> **ITea Lab** — AWS Cloud (Asia Pacific · Singapore) · Infrastructure as Code với AWS CDK
-
----
-
-## Bối cảnh & Vấn đề
-
-Phòng lab *ITea Lab* hiện đang vận hành nhiều trạm thời tiết vật lý, nhưng toàn bộ quá trình thu thập và báo cáo dữ liệu đều thực hiện thủ công. Khi số lượng trạm tăng lên, việc quản lý trở nên không khả thi — không có luồng dữ liệu tự động, không có dashboard tập trung, và không có cơ chế giám sát hay cảnh báo khi có sự cố.
-
-Các nền tảng IoT thương mại như **Thingsboard** hay **CoreIoT** cung cấp đầy đủ tính năng, nhưng lại quá nặng và tốn kém so với nhu cầu thực tế của một phòng lab nghiên cứu quy mô nhỏ với 5 thành viên.
+> **Giải pháp AWS Serverless cho giám sát bãi đỗ xe, nhận diện biển số và hỗ trợ AI**
 
 ---
 
-## Giải pháp: Xây dựng nền tảng AWS Serverless riêng
+## 1. Tóm tắt điều hành
 
-Thay vì dùng giải pháp bên thứ ba, chúng tôi quyết định tự xây dựng một nền tảng nhẹ, chi phí thấp và hoàn toàn tự động hóa trên AWS — đủ đáp ứng nhu cầu của phòng lab, đồng thời là cơ sở để mở rộng thành hệ thống lớn hơn trong tương lai.
+Dự án nhằm xây dựng hệ thống **Parking IoT thông minh** giúp tự động hóa quá trình giám sát bãi đỗ xe, nhận diện phương tiện và quản lý dữ liệu theo thời gian thực. Hệ thống sử dụng các thiết bị IoT như **ESP32 Camera** và **ESP32 cảm biến** để thu thập hình ảnh xe ra/vào, trạng thái vị trí đỗ và dữ liệu từ bãi xe.
 
-Toàn bộ hạ tầng được định nghĩa và triển khai bằng **AWS CDK (Infrastructure as Code)**, đảm bảo tính nhất quán và khả năng tái triển khai nhanh.
+Dữ liệu từ thiết bị được gửi lên AWS thông qua các dịch vụ như **AWS IoT Core**, **Amazon S3**, **Amazon API Gateway** và được xử lý bằng **AWS Lambda**. Hình ảnh phương tiện được lưu trữ trong **Amazon S3**, sau đó kích hoạt Lambda để xử lý ảnh và gọi **Amazon Rekognition** nhằm nhận diện biển số xe. Kết quả nhận diện và dữ liệu cảm biến được lưu vào **Amazon DynamoDB** để phục vụ việc tra cứu, quản lý và hiển thị trên Web/App.
 
----
-
-## Kiến trúc hệ thống
-
-Hệ thống gồm **5 trạm thời tiết** (Raspberry Pi + ESP32), có thể mở rộng lên 15 trạm. Dữ liệu cảm biến (nhiệt độ, độ ẩm, gió, mưa) được truyền qua **MQTT** với xác thực **X.509 Certificate** đến **AWS IoT Core**. Từ đó, **IoT Core Rule** tự động định tuyến vào pipeline xử lý trên cloud.
-
-*Sơ đồ kiến trúc tổng thể (Asia Pacific · Singapore Region):*
-
-![AWS Serverless Architecture — IoT Weather Platform (ITea Lab)](/images/2-Proposal/IOT.jpg)
-
-**Luồng dữ liệu chính:**
-
-```
-Cảm biến (ESP32)
-    → Raspberry Pi Edge Device
-        → MQTT / X.509 → AWS IoT Core (MQTT Broker)
-            → IoT Core Rule → Amazon S3 Raw Data Lake
-                → AWS Lambda (Trigger) → AWS Glue Crawler
-                    → AWS Glue ETL Job → S3 Processed Analytics Data
-                        → API Gateway + Lambda → Next.js Dashboard (Inspira)
-                                                    → AWS Amplify + Cognito
-```
-
-**Các dịch vụ AWS sử dụng:**
-
-| Dịch vụ | Vai trò trong hệ thống |
-| :--- | :--- |
-| **AWS IoT Core** | MQTT Broker — tiếp nhận dữ liệu từ 5 trạm, bảo mật X.509 |
-| **IoT Core Rule** | Định tuyến tự động dữ liệu thô vào S3 Raw Data Lake |
-| **Amazon S3 (x2)** | Raw Data Lake + S3 Processed Analytics Data |
-| **S3 Lifecycle Policy + Glacier** | Tự động chuyển dữ liệu cũ sang Glacier để lưu trữ dài hạn tiết kiệm chi phí |
-| **AWS Lambda** | Process & Trigger Glue — kích hoạt pipeline xử lý dữ liệu |
-| **AWS Glue Crawler + ETL Job** | Lập chỉ mục và chuyển đổi dữ liệu thô thành dữ liệu phân tích |
-| **Amazon API Gateway** | REST API cung cấp dữ liệu cho web dashboard |
-| **Next.js + AWS Amplify** | Web dashboard (Inspira template) — hiển thị real-time |
-| **Amazon Cognito** | Xác thực người dùng — giới hạn 5 Lab Members |
-| **CloudWatch + SNS** | Giám sát log Lambda/Glue; cảnh báo Lambda Errors, Message Count Drop, Budget → Email/SMS Admin |
-| **AWS CDK** | Infrastructure as Code — toàn bộ hạ tầng được quản lý bằng code |
+Ngoài ra, hệ thống còn tích hợp **Amazon Bedrock** thông qua lớp **Lambda AI Service** để hỗ trợ phân tích dữ liệu, trả lời các truy vấn thông minh và cung cấp trải nghiệm quản lý bãi đỗ xe hiện đại hơn. Với kiến trúc AWS Serverless, hệ thống có khả năng mở rộng linh hoạt, giảm chi phí vận hành và không cần quản lý máy chủ truyền thống.
 
 ---
 
-## Kế hoạch triển khai
+## 2. Tuyên bố vấn đề
 
-| Giai đoạn | Thời gian | Nội dung |
+### 2.1. Thách thức hiện tại
+
+Các bãi đỗ xe truyền thống thường gặp nhiều hạn chế trong quá trình vận hành và quản lý. Việc kiểm soát xe ra/vào còn phụ thuộc nhiều vào con người, dễ xảy ra sai sót khi ghi nhận biển số, thời gian vào bãi hoặc trạng thái chỗ đỗ. Khi số lượng phương tiện tăng lên, việc quản lý thủ công sẽ trở nên khó khăn, thiếu tính chính xác và mất nhiều thời gian.
+
+Một số vấn đề chính có thể kể đến như:
+- Khó kiểm tra nhanh tình trạng còn trống hoặc đã đầy của từng vị trí đỗ xe.
+- Việc ghi nhận xe ra/vào còn thủ công, dễ nhầm lẫn biển số hoặc thời gian.
+- Dữ liệu hình ảnh, biển số và trạng thái bãi xe chưa được quản lý tập trung.
+- Người quản lý khó theo dõi lịch sử hoạt động của phương tiện.
+- Khó mở rộng hệ thống khi số lượng camera, cảm biến hoặc vị trí đỗ tăng lên.
+- Việc xây dựng hệ thống riêng có thể tốn chi phí nếu phải đầu tư máy chủ vật lý.
+
+### 2.2. Giải pháp đề xuất
+
+Dự án đề xuất xây dựng hệ thống Parking IoT thông minh trên nền tảng AWS Serverless. Hệ thống sử dụng ESP32 Camera để chụp ảnh xe ra/vào, ESP32 cảm biến để ghi nhận trạng thái chỗ đỗ, sau đó gửi dữ liệu lên AWS để xử lý và lưu trữ tập trung.
+
+**Giải pháp bao gồm các chức năng chính:**
+- **ESP32 Camera** chụp ảnh phương tiện khi xe ra hoặc vào bãi.
+- **ESP32 cảm biến** phát hiện trạng thái từng vị trí đỗ xe.
+- Ảnh xe được tải lên **Amazon S3** thông qua Presigned URL.
+- **AWS Lambda** xử lý sự kiện khi có ảnh mới được upload lên S3.
+- **Amazon Rekognition** phân tích hình ảnh và hỗ trợ nhận diện biển số xe.
+- **DynamoDB** lưu thông tin xe, biển số, thời gian, trạng thái và dữ liệu cảm biến.
+- **Web/App** cho người dùng truy cập, đăng nhập, xem trạng thái bãi xe và lịch sử xe ra/vào.
+- **Amazon Cognito** hỗ trợ xác thực và phân quyền người dùng.
+- **Amazon Bedrock** hỗ trợ lớp AI để phân tích dữ liệu và trả lời câu hỏi thông minh.
+- **Amazon CloudWatch** giám sát log, lỗi và trạng thái hoạt động của hệ thống.
+
+### 2.3. Hiệu quả kỳ vọng
+
+Hệ thống giúp giảm thao tác thủ công, tăng độ chính xác trong quản lý bãi xe, hỗ trợ giám sát theo thời gian thực và tạo nền tảng dữ liệu phục vụ phân tích AI trong tương lai. Nhờ sử dụng kiến trúc Serverless, hệ thống có thể mở rộng linh hoạt theo số lượng thiết bị, số lượng xe và nhu cầu sử dụng thực tế.
+
+### 2.4. Phạm vi dự án
+
+Việc xác định rõ giới hạn của dự án giúp tập trung vào các tính năng cốt lõi và đảm bảo tính khả thi trong quá trình triển khai:
+- **Trong phạm vi:** Nhận diện biển số xe bằng AI, ghi nhận trạng thái chỗ đỗ bằng cảm biến, tự động lưu lịch sử ra/vào, ra quyết định mở cổng, hiển thị dashboard giám sát trên Web App và hỗ trợ truy vấn bằng trợ lý ảo Bedrock.
+- **Ngoài phạm vi:** Tạm thời chưa tích hợp module thanh toán phí đỗ xe trực tuyến, chưa làm ứng dụng Mobile App native (chỉ tập trung tối ưu trên nền tảng Web App).
+
+### 2.5. Mục tiêu cụ thể (KPIs)
+
+Dự án đặt ra các mục tiêu kỹ thuật cụ thể có thể đo lường được để đánh giá sự thành công:
+- **Độ trễ (Latency):** Thời gian từ lúc chụp ảnh đến lúc lưu dữ liệu, phân tích biển số và ra lệnh mở cổng dưới 2-3 giây.
+- **Độ chính xác (Accuracy):** Tỷ lệ nhận diện đúng biển số xe (Confidence score) đạt trên 95% trong điều kiện ánh sáng tốt.
+- **Độ ổn định:** Hạ tầng AWS Serverless đảm bảo thời gian hoạt động (uptime) lên đến 99.9%, tự động mở rộng khi lưu lượng tăng đột biến.
+
+---
+
+## 3. Kiến trúc giải pháp
+
+Hệ thống áp dụng kiến trúc **AWS Serverless** nhằm giảm chi phí quản lý hạ tầng, tăng khả năng mở rộng và dễ dàng tích hợp với các dịch vụ AI, IoT và cơ sở dữ liệu trên AWS.
+
+*Sơ đồ kiến trúc tổng thể (AWS Serverless Architecture):*
+
+![Sơ đồ kiến trúc tổng thể - Smart Parking IoT](/images/2-Proposal/2-proposal-architecture.png)
+
+### 3.1. Các dịch vụ AWS chủ chốt
+
+| Phân hệ | Dịch vụ AWS | Chức năng |
 | :--- | :--- | :--- |
-| Nghiên cứu & Thiết kế | Tháng 0 (trước thực tập) | Nghiên cứu phần cứng, thiết kế kiến trúc, viết CDK stacks |
-| Tính toán & Điều chỉnh | Tháng 1 | AWS Pricing Calculator, học dịch vụ liên quan, nâng cấp phần cứng |
-| Phát triển | Tháng 2 | Lập trình Raspberry Pi, triển khai AWS với CDK, xây dựng Next.js dashboard |
-| Kiểm thử & Ra mắt | Tháng 3 | End-to-end testing, cấu hình CloudWatch Alarms, triển khai production |
-| Thu thập dữ liệu | 1 năm sau | Vận hành liên tục để tích lũy dữ liệu thời tiết cho nghiên cứu AI/ML |
+| **Giao diện người dùng** | Amazon Route 53 <br> Amazon CloudFront <br> AWS WAF <br> Amazon S3 Static Website | Quản lý tên miền. <br> Phân phối nội dung website. <br> Bảo vệ website khỏi truy cập độc hại. <br> Lưu trữ giao diện Web/App tĩnh. |
+| **Xác thực & Phân quyền** | Amazon Cognito <br> IAM | Quản lý đăng nhập, xác thực. <br> Quản lý quyền truy cập giữa các dịch vụ. |
+| **API & Backend** | Amazon API Gateway <br> AWS Lambda | Nhận request từ Web/App/Thiết bị. <br> Xử lý nghiệp vụ chính, xử lý ảnh, dữ liệu cảm biến và AI. |
+| **IoT & Thiết bị biên** | AWS IoT Core <br> ESP32 Camera / Cảm biến | Nhận dữ liệu MQTT từ thiết bị IoT. <br> Thu thập hình ảnh và trạng thái chỗ đỗ. |
+| **Lưu trữ & Database** | Amazon S3 <br> Amazon DynamoDB | Lưu trữ hình ảnh xe. <br> Lưu dữ liệu biển số, lịch sử, trạng thái chỗ đỗ. |
+| **Xử lý ảnh & AI** | Amazon Rekognition <br> Amazon Bedrock | Phân tích ảnh, nhận diện biển số. <br> Hỗ trợ phân tích dữ liệu, truy vấn thông minh. |
+| **Giám sát hệ thống** | Amazon CloudWatch | Ghi log, theo dõi lỗi, giám sát các thành phần liên quan. |
 
 ---
 
-## Chi phí ước tính
+## 4. Luồng hoạt động của hệ thống
 
-Chi phí vận hành hàng tháng cực kỳ thấp nhờ kiến trúc Serverless — chỉ trả tiền khi có dữ liệu gửi đến.
+### 4.1. Luồng truy cập Web/App
 
-| Dịch vụ | Chi phí/tháng |
+Người dùng truy cập hệ thống thông qua trình duyệt web hoặc thiết bị di động. Website được lưu trữ trên Amazon S3 Static Website và phân phối thông qua Amazon CloudFront.
+
+```text
+Người dùng → Route 53 → CloudFront → AWS WAF → Amazon S3 Static Website → API Gateway → Lambda Backend → DynamoDB
+```
+
+### 4.2. Luồng xác thực người dùng
+
+Hệ thống sử dụng Amazon Cognito để xác thực người dùng. Cognito cấp token để Web/App gửi kèm trong các request đến API Gateway.
+
+```text
+Người dùng → Amazon Cognito → API Gateway (Cognito Authorizer) → Lambda Backend → DynamoDB
+```
+
+### 4.3. Sơ đồ mạch điện khu vực cổng ra/vào (ESP32 Camera)
+
+Khu vực cổng được trang bị vi điều khiển ESP32 kết hợp Camera module để nhận diện phương tiện ra vào bãi đỗ.
+
+![Sơ đồ đấu dây cổng](/images/2-Proposal/1.sơ%20đồ%20đấu%20dây%20cổng.png)
+
+
+**Ví dụ dữ liệu lịch sử xe ra/vào được lưu:**
+```json
+{
+  "plate_number": "29A17938",
+  "timestamp": 1782032316749,
+  "allow_open": true,
+  "bucket": "smart-parking-images-075647413376-ap-southeast-1-an",
+  "camera_id": "gate-in-01",
+  "confidence": 98.23,
+  "created_at": "2026-06-21T15:58:36.749547+07:00",
+  "device_id": "gate-in-01",
+  "direction": "IN",
+  "display_plate_number": "29A-179.38",
+  "event_id": "evt_29A17938_1782032316749_IN_21668d9a",
+  "image_key": "parking/in/photo-1782032314126-8770cde7.jpg",
+  "raw_plate_number": "29A-179.38",
+  "status": "ALLOWED",
+  "vehicle_type": "GUEST"
+}
+```
+
+### 4.4. Sơ đồ mạch điện khu vực đỗ xe (ESP32 Cảm biến)
+
+Các vị trí đỗ xe được trang bị cảm biến (siêu âm/hồng ngoại) kết nối với vi điều khiển ESP32 để theo dõi trạng thái trống/đầy.
+
+![Sơ đồ đấu dây bãi xe](/images/2-Proposal/2.sơ%20đồ%20dây%20bãi%20xe.png)
+
+
+**Ví dụ dữ liệu cảm biến lưu trữ cho mỗi vị trí đỗ:**
+```json
+{
+  "slot_id": "A1",
+  "distance_cm": 2.8,
+  "is_occupied": 1,
+  "sensor_id": "esp-slot-01",
+  "threshold_cm": 3.5,
+  "updated_at": "2026-07-09T17:33:56.017039+07:00",
+  "zone": "Zone_A",
+  "zone_id": "A"
+}
+```
+
+### 4.5. Luồng xử lý AI Service
+
+Hệ thống tích hợp lớp AI để hỗ trợ người dùng và quản trị viên truy vấn dữ liệu bãi đỗ xe bằng ngôn ngữ tự nhiên.
+
+```text
+Web/App → API Gateway → Lambda AI Service → Amazon Bedrock → DynamoDB → Web/App
+```
+
+### 4.6. Luồng giám sát hệ thống
+
+Amazon CloudWatch được sử dụng để ghi log và giám sát hoạt động của toàn bộ các dịch vụ.
+
+```text
+API Gateway / Lambda / IoT Core / Rekognition / DynamoDB → CloudWatch
+```
+
+---
+
+## 5. Triển khai kỹ thuật
+
+| Giai đoạn | Nội dung |
 | :--- | :--- |
-| AWS IoT Core (MQTT) | $0.08 |
-| Amazon S3 (x2 buckets) | $0.15 |
-| AWS Glue Crawler | $0.07 |
-| AWS Glue ETL Jobs | $0.02 |
-| AWS Lambda | $0.00 |
-| Amazon API Gateway | $0.01 |
-| AWS Amplify | $0.35 |
-| Data Transfer | $0.02 |
-| **Tổng** | **~$0.70/tháng · $8.40/năm** |
-
-> Phần cứng ($265 — Raspberry Pi 5 + cảm biến) được tận dụng từ hệ thống trạm thời tiết sẵn có.
-> Chi phí đầy đủ: [AWS Pricing Calculator](https://calculator.aws/#/estimate?id=621f38b12a1ef026842ba2ddfe46ff936ed4ab01)
+| **Giai đoạn 1: Phân tích & thiết kế** | Xác định phạm vi triển khai, số lượng camera/cảm biến, thiết kế sơ đồ kiến trúc và cơ sở dữ liệu. |
+| **Giai đoạn 2: Triển khai IoT** | Cấu hình ESP32 Camera chụp ảnh và ESP32 cảm biến kết nối MQTT với AWS IoT Core. |
+| **Giai đoạn 3: AWS Backend** | Tạo API Gateway, Lambda Functions, S3 Buckets, DynamoDB tables và tích hợp Rekognition. |
+| **Giai đoạn 4: Xây dựng Web/App** | Phát triển giao diện người dùng, tích hợp Cognito xác thực và hiển thị trạng thái bãi xe. |
+| **Giai đoạn 5: AI & Giám sát** | Cấu hình Amazon Bedrock, thiết lập CloudWatch logging và báo động (Alarms). |
 
 ---
 
-## Rủi ro & Phương án dự phòng
+## 6. Ước tính ngân sách
 
-| Rủi ro | Phương án xử lý |
-| :--- | :--- |
-| Mất kết nối mạng tại trạm | Docker buffer cục bộ trên Raspberry Pi — dữ liệu được gửi lại khi kết nối phục hồi |
-| Hỏng cảm biến ESP32 | Kiểm tra định kỳ + dự phòng linh kiện thay thế |
-| Chi phí AWS vượt dự kiến | CloudWatch Budget Alarm tự động cảnh báo trước khi đến ngưỡng |
-| Lỗi Lambda hoặc Glue pipeline | CloudWatch Alarms + SNS gửi thông báo ngay cho Admin để xử lý |
-| Sự cố nghiêm trọng AWS | Toàn bộ hạ tầng tái triển khai nhanh bằng AWS CDK từ code |
+### 6.1. Chi phí phần cứng
+- **ESP32 Camera**: Theo số cổng ra/vào.
+- **ESP32 cảm biến & Cảm biến siêu âm**: Theo số vị trí đỗ.
+- **Phụ kiện**: Nguồn điện, dây nối, hộp bảo vệ, Router/WiFi.
+
+### 6.2. Chi phí dịch vụ AWS (Pay-as-you-go)
+- **Tính toán & Xử lý**: AWS Lambda, Amazon Rekognition, Amazon Bedrock.
+- **Lưu trữ**: Amazon S3 (Ảnh), Amazon DynamoDB (Dữ liệu).
+- **Mạng & API**: AWS IoT Core, Amazon API Gateway, Amazon CloudFront.
+- **Quản lý**: Amazon Cognito, Amazon CloudWatch, AWS Budgets.
 
 ---
 
-## Kết quả kỳ vọng
+## 7. Đánh giá rủi ro & Phương án dự phòng
 
-Sau khi hoàn thành, hệ thống sẽ:
-- **Tự động hóa hoàn toàn** luồng dữ liệu từ cảm biến đến dashboard, không cần can thiệp thủ công
-- **Cung cấp dữ liệu thời tiết liên tục** trong 1 năm — nguồn tài nguyên phục vụ nghiên cứu AI/ML của phòng lab
-- **Có khả năng mở rộng** từ 5 lên 10–15 trạm mà không cần thay đổi kiến trúc
-- **Trở thành nền tảng tham khảo** để xây dựng các hệ thống IoT lớn hơn trong tương lai
+| Rủi ro | Mức độ | Phương án dự phòng |
+| :--- | :--- | :--- |
+| **Thiết bị mất kết nối mạng** | Trung bình | Lưu tạm dữ liệu cục bộ và gửi lại khi có mạng. |
+| **Ảnh biển số bị mờ** | Cao | Điều chỉnh góc camera, ánh sáng và khoảng cách chụp. |
+| **Nhận diện biển số sai** | Trung bình | Kết hợp kiểm tra thủ công và nâng cao chất lượng ảnh. |
+| **Lỗi dịch vụ AWS (Lambda, API)**| Trung bình | Theo dõi CloudWatch Alarms để xử lý kịp thời. |
+| **Vượt ngân sách AWS** | Trung bình | Thiết lập AWS Budgets để tự động cảnh báo. |
+
+---
+
+## 8. Kết luận
+
+Dự án **Parking IoT thông minh** sử dụng AWS Serverless là giải pháp phù hợp để hiện đại hóa việc quản lý bãi đỗ xe. Sự kết hợp giữa **IoT, Serverless và AI (Rekognition, Bedrock)** tạo ra nền tảng quản lý tự động, độ chính xác cao và khả năng mở rộng không giới hạn mà không cần duy trì máy chủ vật lý.

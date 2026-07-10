@@ -6,19 +6,28 @@ chapter: false
 pre: " <b> 5. </b> "
 ---
 
-# IoT Weather Platform — Detailed Deployment Guide
+# Smart Parking IoT System — Detailed Implementation Guide
 
 #### Overview
 
-The **IoT Weather Platform** is a real-time weather monitoring platform built on an AWS Serverless architecture for the *ITea Lab* team. The system collects data from weather stations using Raspberry Pi + ESP32 devices, processes and stores it via AWS services, and visualizes it through a web dashboard.
+The **Smart Parking IoT System** is a comprehensive parking management automation solution built on the **AWS Serverless** architecture. It integrates edge IoT devices (ESP32 Camera and ultrasonic sensors) to recognize entering/exiting vehicles, detect empty/occupied parking slot statuses in real-time, automatically store and process data, and provide a web dashboard interface with an AI-assisted chatbot.
 
-In this section, we walk through the complete system deployment steps end-to-end — from edge hardware configuration, AWS infrastructure setup, to the web interface and testing.
+In this Workshop section, we will walk through all the implementation steps in detail from start to finish — including AWS infrastructure configuration, hardware flashing, user interface building, and monitoring setup.
 
-#### Content
+#### Table of Contents
 
-1. [Workshop Overview](5.1-Workshop-overview/)
-2. [Environment Setup](5.2-Prerequiste/)
-3. [AWS IoT Core & S3 Data Lake Setup](5.3-S3-vpc/)
-4. [Data Processing with AWS Glue](5.4-S3-onprem/)
-5. [Web Dashboard Deployment with Amplify](5.5-Policy/)
-6. [Resource Cleanup](5.6-Cleanup/)
+1. [Workshop Overview](5.1-workshop-overview/)
+2. [Prerequisites](5.2-prerequisite/)
+3. [AWS IoT Core & Amazon S3](5.3-iot-core-s3/)
+   * 3.1. [Configure AWS IoT Core](5.3-iot-core-s3/5.3.1-iot-core-setup/)
+   * 3.2. [Create S3 Bucket & Presigned URL](5.3-iot-core-s3/5.3.2-s3-presigned-url/)
+4. [Lambda & Amazon Rekognition](5.4-lambda-rekognition/)
+   * 4.1. [Lambda Image Processing](5.4-lambda-rekognition/5.4.1-lambda-image-processing/)
+   * 4.2. [Amazon Rekognition Integration](5.4-lambda-rekognition/5.4.2-rekognition-integration/)
+   * 4.3. [DynamoDB Tables Design](5.4-lambda-rekognition/5.4.3-dynamodb-setup/)
+   * 4.4. [End-to-End Recognition Test](5.4-lambda-rekognition/5.4.4-end-to-end-test/)
+5. [API Gateway, Cognito & Bedrock](5.5-api-cognito-bedrock/)
+6. [ESP32 Hardware Setup](5.6-hardware-esp32/)
+7. [Web Dashboard](5.7-web-dashboard/)
+8. [Monitoring with CloudWatch](5.8-monitoring-cloudwatch/)
+9. [Clean Up Resources](5.9-cleanup/)
