@@ -83,7 +83,7 @@ After receiving results from Amazon Rekognition, the Lambda function applies a f
 
 Recognition data processing flowchart:
 
-```mermaid
+{{< mermaid >}}
 graph TD
     A[Image captured by ESP32] --> B(Upload to S3)
     B --> C[Lambda Triggered]
@@ -93,4 +93,4 @@ graph TD
     F --> G{Matches Vietnamese plate Regex?}
     G -- Yes --> H[Save to Database & Open barrier gate]
     G -- No --> I[Log recognition error & Keep barrier closed]
-```
+{{< /mermaid >}}

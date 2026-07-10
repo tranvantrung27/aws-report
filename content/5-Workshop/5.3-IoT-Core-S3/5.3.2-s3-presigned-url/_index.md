@@ -63,7 +63,7 @@ By default, all objects (images) in our S3 Bucket are private. The ESP32 Camera 
 An **S3 Presigned URL** completely solves this security vulnerability. It is a temporary URL generated and signed by the Serverless backend using AWS IAM credentials, allowing anyone with the URL to upload (PUT) or view (GET) objects **without AWS login credentials**. The URL **automatically expires** after a preconfigured duration (e.g., 5 minutes).
 
 #### 2. Workflow:
-```mermaid
+{{< mermaid >}}
 sequenceDiagram
     autonumber
     participant ESP32 as ESP32 Camera (IoT)
@@ -71,14 +71,14 @@ sequenceDiagram
     participant Lambda as AWS Lambda (Generator)
     participant S3 as Amazon S3 Bucket
     
-    ESP32->>API: 1. Request image upload (sends file name)
-    API->>Lambda: 2. Triggers Lambda to generate URL
-    Lambda->>S3: 3. Calls S3 SDK to generate PUT Presigned URL
-    S3-->>Lambda: 4. Returns temporary Presigned URL (5-min expiry)
-    Lambda-->>API: 5. Returns URL via API Gateway
-    API-->>ESP32: 6. Sends Presigned URL to the device
-    ESP32->>S3: 7. Uploads image file directly to S3 via Presigned URL
-    S3-->>ESP32: 8. Responds upload success (HTTP 200 OK)
-```
+    ESP32->>API: Request image upload (sends file name)
+    API->>Lambda: Triggers Lambda to generate URL
+    Lambda->>S3: Calls S3 SDK to generate PUT Presigned URL
+    S3-->>Lambda: Returns temporary Presigned URL (5-min expiry)
+    Lambda-->>API: Returns URL via API Gateway
+    API-->>ESP32: Sends Presigned URL to the device
+    ESP32->>S3: Uploads image file directly to S3 via Presigned URL
+    S3-->>ESP32: Responds upload success (HTTP 200 OK)
+{{< /mermaid >}}
 
 In the subsequent sections of the Workshop, we will write Lambda code to generate this URL, and ESP32 code to receive the URL and perform the image upload.
