@@ -45,7 +45,7 @@ chapter: false
 <div>Workforce Bootcamp - Hành trình đám mây AI đầu tiên</div>
 
 <div style="font-weight: bold; color: #1e293b;">Thời gian thực tập:</div>
-<div>Từ ngày 20/04/2026 đến ngày 13/07/2026</div>
+<div>Từ ngày 17/04/2026 đến ngày 30/07/2026</div>
 </div>
 </div>
 

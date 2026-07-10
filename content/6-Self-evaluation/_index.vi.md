@@ -6,7 +6,7 @@ chapter: false
 pre: " <b> 5. </b> "
 ---
 
-Trong suốt thời gian thực tập tại **Công ty TNHH Amazon Web Services Vietnam** từ **20/04/2026** đến **13/07/2026**, tôi đã có cơ hội học hỏi, rèn luyện và áp dụng kiến thức đã được trang bị tại trường vào môi trường làm việc thực tế.  
+Trong suốt thời gian thực tập tại **Công ty TNHH Amazon Web Services Vietnam** từ **17/04/2026** đến **30/07/2026**, tôi đã có cơ hội học hỏi, rèn luyện và áp dụng kiến thức đã được trang bị tại trường vào môi trường làm việc thực tế.  
 Tôi đã tham gia **chương trình đào tạo AWS Cloud (12 tuần) và xây dựng dự án tốt nghiệp "Hệ thống Parking IoT thông minh" tích hợp AWS Serverless** — bao gồm thiết kế kiến trúc hệ thống, lập trình ESP32 Camera/Cảm biến, triển khai AWS IoT Core, Lambda, API Gateway, DynamoDB, Amazon Rekognition và Amazon Bedrock. Qua đó, tôi đã cải thiện đáng kể các kỹ năng **thiết kế kiến trúc Cloud, lập trình IoT/Backend, phân tích dữ liệu, viết báo cáo kỹ thuật và làm việc nhóm**.  
 
 Về tác phong, tôi luôn cố gắng hoàn thành tốt nhiệm vụ, tuân thủ nội quy, và tích cực trao đổi với đồng nghiệp để nâng cao hiệu quả công việc.
