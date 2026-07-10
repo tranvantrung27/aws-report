@@ -1,9 +1,9 @@
 ---
 title: "Chia sẻ, đóng góp ý kiến"
 date: 2026-04-26
-weight: 7
+weight: 6
 chapter: false
-pre: " <b> 7. </b> "
+pre: " <b> 6. </b> "
 ---
 
 ### Đánh giá chung

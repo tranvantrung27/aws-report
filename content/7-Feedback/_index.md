@@ -1,9 +1,9 @@
 ---
 title: "Sharing and Feedback"
 date: 2026-04-26
-weight: 7
+weight: 6
 chapter: false
-pre: " <b> 7. </b> "
+pre: " <b> 6. </b> "
 ---
 
 ### Overall Evaluation

@@ -1,9 +1,9 @@
 ---
 title: "Events Participated"
 date: 2026-04-26
-weight: 4
+weight: 3
 chapter: false
-pre: " <b> 4. </b> "
+pre: " <b> 3. </b> "
 ---
 
 > In this section, you should list and describe in detail the events you have participated in during your internship or work experience.  
@@ -17,7 +17,7 @@ pre: " <b> 4. </b> "
 > * Outcomes or value gained (lessons learned, new skills, contribution to the team/project)
 > * This listing helps demonstrate your actual participation as well as the soft skills and experience you have gained from each event.
 
-During my internship, I participated in two events. Each one was a memorable experience that provided new, interesting, and useful knowledge, along with gifts and wonderful moments.
+During my internship, I participated in one event. It was a memorable experience that provided new, interesting, and useful knowledge, along with gifts and wonderful moments.
 
 ### [Event 1](4.1-Event1/)  
 &emsp;**Event Name:** AWS Community Day Event  
@@ -28,13 +28,3 @@ During my internship, I participated in two events. Each one was a memorable exp
 
 &emsp;**Role:** Attendee  
 
----
-
-### [Event 2](4.2-Event2/)  
-&emsp;**Event Name:** GenAI-powered App-DB Modernization workshop  
-
-&emsp;**Date & Time:** 09:00, August 13, 2026  
-
-&emsp;**Location:** 26th Floor, Bitexco Tower, 02 Hai Trieu Street, Saigon Ward, Ho Chi Minh City  
-
-&emsp;**Role:** Attendee  

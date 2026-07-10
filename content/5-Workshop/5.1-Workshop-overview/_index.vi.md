@@ -3,10 +3,10 @@ title : "Tổng quan về Workshop"
 date : 2026-04-26
 weight : 1
 chapter : false
-pre : " <b> 5.1. </b> "
+pre : " <b> 4.1. </b> "
 ---
 
-### 5.1. Tổng quan & Kiến trúc hệ thống
+### 4.1. Tổng quan & Kiến trúc hệ thống
 
 #### Tổng quan dự án
 

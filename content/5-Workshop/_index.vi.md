@@ -1,18 +1,18 @@
 ---
 title: "Workshop"
 date: 2026-04-26
-weight: 5
+weight: 4
 chapter: false
-pre: " <b> 5. </b> "
+pre: " <b> 4. </b> "
 ---
 
 # Hệ thống Parking IoT thông minh — Hướng dẫn triển khai chi tiết
 
 #### Tổng quan
 
-**Hệ thống Parking IoT thông minh** là một giải pháp tự động hóa quản lý bãi đỗ xe toàn diện được xây dựng trên kiến trúc **AWS Serverless**. Hệ thống kết hợp các thiết bị IoT biên (ESP32 Camera và cảm biến siêu âm) để nhận diện phương tiện ra/vào bãi đỗ, phát hiện trạng thái trống/đầy của các vị trí đỗ xe theo thời gian thực, lưu trữ và xử lý dữ liệu tự động, đồng thời cung cấp giao diện dashboard web và chatbot hỗ trợ AI.
+**Hệ thống Parking IoT thông minh** là giải pháp tự động hóa quản lý bãi đỗ xe toàn diện được xây dựng trên kiến trúc **AWS Serverless**. Hệ thống kết hợp thiết bị IoT biên (ESP32 Camera và cảm biến siêu âm) để nhận diện phương tiện ra/vào bãi đỗ, phát hiện trạng thái trống/đầy của các vị trí đỗ xe theo thời gian thực, lưu trữ và xử lý dữ liệu tự động, đồng thời cung cấp giao diện dashboard web và chatbot hỗ trợ AI.
 
-Trong phần Workshop này, chúng ta sẽ đi qua toàn bộ các bước triển khai hệ thống chi tiết từ đầu đến cuối — bao gồm cả cấu hình hạ tầng AWS, nạp code cho thiết bị phần cứng, xây dựng giao diện người dùng và thiết lập giám sát.
+Nội dung phần này trình bày chi tiết quá trình thiết kế, cấu hình và triển khai thực tế của toàn bộ hệ thống từ đầu đến cuối — bao gồm thiết lập hạ tầng dịch vụ AWS, lập trình nạp code cho thiết bị phần cứng, xây dựng giao diện người dùng và cấu hình giám sát vận hành.
 
 #### Nội dung
 

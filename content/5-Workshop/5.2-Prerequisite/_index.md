@@ -1,12 +1,12 @@
 ---
-title : "Prerequisites"
-date : 2026-04-26
-weight : 2
-chapter : false
-pre : " <b> 5.2. </b> "
+title: "Prerequisites"
+date: 2026-04-26
+weight: 2
+chapter: false
+pre: " <b> 4.2. </b> "
 ---
 
-### 5.2. Prerequisites
+### 4.2. Prerequisites
 
 To deploy the Smart Parking IoT system on the AWS environment, the preparation of hardware resources, software tools, and the configuration of required access permissions are conducted as follows.
 

@@ -58,11 +58,12 @@ chapter: false
 <ol style="padding-left: 20px; margin: 0; line-height: 1.8; font-size: 15px; font-weight: 600;">
 <li style="margin-bottom: 6px;"><a href="1-Worklog/" style="color: #2563eb; text-decoration: none;">Worklog</a></li>
 <li style="margin-bottom: 6px;"><a href="2-Proposal/" style="color: #2563eb; text-decoration: none;">Proposal</a></li>
-<li style="margin-bottom: 6px;"><a href="3-BlogsTranslated/" style="color: #2563eb; text-decoration: none;">Các bài blogs đã dịch</a></li>
 <li style="margin-bottom: 6px;"><a href="4-EventParticipated/" style="color: #2563eb; text-decoration: none;">Các events đã tham gia</a></li>
 <li style="margin-bottom: 6px;"><a href="5-Workshop/" style="color: #2563eb; text-decoration: none;">Workshop</a></li>
 <li style="margin-bottom: 6px;"><a href="6-Self-evaluation/" style="color: #2563eb; text-decoration: none;">Tự đánh giá</a></li>
-<li style="margin-bottom: 0;"><a href="7-Feedback/" style="color: #2563eb; text-decoration: none;">Chia sẻ, đóng góp ý kiến</a></li>
+<li style="margin-bottom: 6px;"><a href="7-Feedback/" style="color: #2563eb; text-decoration: none;">Chia sẻ, đóng góp ý kiến</a></li>
+<li style="margin-bottom: 0;"><a href="7-References/" style="color: #2563eb; text-decoration: none;">Tài liệu tham khảo</a></li>
+
 </ol>
 </div>
 </div>

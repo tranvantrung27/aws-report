@@ -3,84 +3,84 @@ title: "Cấu hình AWS IoT Core"
 date: 2026-04-26
 weight: 1
 chapter: false
-pre: " <b> 5.3.1. </b> "
+pre: " <b> 4.3.1. </b> "
 ---
 
-Trong phần này, chúng ta sẽ thực hiện cấu hình **AWS IoT Core** để đăng ký thiết bị phần cứng (ESP32 Camera) và thiết lập các chứng chỉ bảo mật cho phép thiết bị giao tiếp an toàn với đám mây AWS thông qua giao thức MQTT.
+Trong quá trình xây dựng hệ thống đỗ xe thông minh, việc thiết lập kênh truyền thông tin cậy và bảo mật giữa thiết bị biên (ESP32) và đám mây được thực hiện thông qua cấu hình các thành phần quản lý định danh, xác thực và phân quyền trên **AWS IoT Core**.
 
 ---
 
-### Bước 1: Tạo IoT Thing (Đăng ký thiết bị)
-1. Đăng nhập vào **AWS Management Console** và tìm kiếm dịch vụ **IoT Core**.
-2. Ở thanh điều hướng bên trái, chọn **Manage** -> **All devices** -> **Things**.
-3. Nhấp chọn **Create things** để bắt đầu đăng ký thiết bị mới:
-   - Chọn **Create single thing** và nhấn **Next**.
-   - **Thing name**: Đặt tên thiết bị là `ESP32_Cam_Parking`.
-   - Các cấu hình khác giữ nguyên mặc định và nhấn **Next**.
+### 1. Đăng ký thiết bị biên (Thing Registration)
+Để định danh thiết bị vật lý trên môi trường đám mây, một đối tượng thiết bị (**Thing**) đã được khởi tạo trong Registry của AWS IoT Core:
+- **Tên thiết bị (Thing Name)**: `ESP32_SmartParking`
+- **Vai trò**: Đại diện cho trạm kiểm soát vật lý tại cổng bãi đỗ xe, chịu trách nhiệm gửi dữ liệu trạng thái chỗ đỗ từ cảm biến siêu âm và hình ảnh từ camera về hệ thống trung tâm.
 
 ![Đăng ký IoT Thing](/images/5-Workshop/5.3-IoT-Core-S3/5.3.1-create-thing.png)
-*(Minh chứng: Ảnh chụp màn hình trang tạo Thing thành công hoặc danh sách Things có chứa ESP32_Cam_Parking)*
+*Minh chứng 5.3.1.1: Trạng thái thiết bị ESP32_SmartParking được đăng ký thành công trên AWS IoT Core*
 
 ---
 
-### Bước 2: Thiết lập Chứng chỉ bảo mật (Certificates)
-AWS IoT Core yêu cầu xác thực bằng chứng chỉ X.509 để đảm bảo kết nối bảo mật tuyệt đối:
-1. Ở trang **Device certificate**, chọn **Auto-generate new certificate (recommended)**. Nhấn **Next**.
-2. **Download các tệp tin chứng chỉ**:
-   > [!IMPORTANT]
-   > Bạn phải tải toàn bộ các tệp tin này xuống ngay lập tức vì AWS sẽ không cho phép tải lại lần thứ hai sau khi bạn rời trang này.
-   - **Device certificate** (dạng `xxx.cert.pem`).
-   - **Private key file** (dạng `xxx.private.key`).
-   - **Amazon Root CA 1** (chứng chỉ gốc CA của AWS).
-3. Lưu các tệp tin này vào một thư mục an toàn trên máy tính của bạn.
-4. Nhấn **Next** (khoan nhấn *Create thing* vì chúng ta cần tạo Policy ở bước tiếp theo).
+### 2. Cơ chế xác thực và chứng chỉ bảo mật (Certificates)
+Giao tiếp giữa thiết bị ESP32 và AWS IoT Core được bảo vệ bằng cơ chế mã hóa và xác thực hai chiều dựa trên tiêu chuẩn chứng chỉ số **X.509**:
+- **Device Certificate**: Chứng chỉ dùng để xác thực danh tính duy nhất của thiết bị ESP32 với AWS IoT Core MQTT Broker.
+- **Private Key**: Khóa riêng tư dùng để thiết lập kết nối mã hóa TLS bảo mật, được lưu trữ an toàn để nạp vào bộ nhớ của vi điều khiển và không thể tải lại từ console AWS.
+- **Amazon Root CA 1**: Chứng chỉ gốc của Amazon giúp thiết bị xác minh tính chính thống của máy chủ AWS IoT Core đang kết nối.
 
-![Tải chứng chỉ bảo mật](/images/5-Workshop/5.3-IoT-Core-S3/5.3.1-certificates.png)
-*(Minh chứng: Ảnh chụp màn hình bước tải xuống các file Certificate và Key)*
+Các chứng chỉ này được kích hoạt ở trạng thái **Active** để sẵn sàng cho quá trình xác thực khi thiết bị khởi động và kết nối mạng.
+
+![Trạng thái Chứng chỉ](/images/5-Workshop/5.3-IoT-Core-S3/5.3.1-certificates.png)
+*Minh chứng 5.3.1.2: Các chứng chỉ bảo mật liên kết với thiết bị ở trạng thái Active*
 
 ---
 
-### Bước 3: Tạo và gắn AWS IoT Policy
-Policy dùng để phân quyền cụ thể cho thiết bị được phép thực hiện những hành động nào (gửi dữ liệu, nhận tin nhắn, kết nối) trên hệ thống MQTT Broker.
+### 3. Phân quyền và kiểm soát truy cập (AWS IoT Policy)
+Chính sách bảo mật **AWS IoT Policy** được thiết lập với tên gọi `esp-slot-01-policy` và gắn trực tiếp với chứng chỉ xác thực của thiết bị. Nhằm tuân thủ nguyên tắc đặc quyền tối thiểu (Least Privilege), chính sách này chỉ mở ra các quyền hạn tối thiểu cần thiết cho hoạt động của trạm kiểm soát:
+- **iot:Connect**: Giới hạn quyền kết nối của thiết bị, chỉ cho phép kết nối thành công khi sử dụng đúng Client ID là `esp-slot-01`.
+- **iot:Publish**: Chỉ cho phép thiết bị gửi (Publish) dữ liệu trạng thái lên một topic duy nhất là `smart-parking/slots/update`.
 
-1. Tại trang gắn Policy, nhấp chọn **Create policy** (sẽ mở ra một tab trình duyệt mới).
-2. Thiết lập thông số Policy:
-   - **Policy name**: Đặt tên là `ESP32_Parking_Policy`.
-   - **Policy document**: Chuyển sang chế độ **JSON** và dán đoạn mã phân quyền sau đây vào:
-   ```json
-   {
-     "Version": "2012-10-17",
-     "Statement": [
-       {
-         "Effect": "Allow",
-         "Action": [
-           "iot:Connect",
-           "iot:Publish",
-           "iot:Subscribe",
-           "iot:Receive"
-         ],
-         "Resource": [
-           "*"
-         ]
-       }
-     ]
-   }
-   ```
-3. Nhấn **Create** để hoàn thành tạo Policy.
-4. Quay lại tab đăng ký Thing trước đó, chọn Policy vừa tạo (`ESP32_Parking_Policy`).
-5. Nhấp chọn **Create thing** để hoàn tất quá trình đăng ký thiết bị.
+Tài liệu cấu hình JSON của chính sách bảo mật được thiết lập như sau:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": "iot:Connect",
+      "Resource": "arn:aws:iot:ap-southeast-1:075647413376:client/esp-slot-01"
+    },
+    {
+      "Effect": "Allow",
+      "Action": "iot:Publish",
+      "Resource": "arn:aws:iot:ap-southeast-1:075647413376:topic/smart-parking/slots/update"
+    }
+  ]
+}
+```
 
 ![Cấu hình IoT Policy](/images/5-Workshop/5.3-IoT-Core-S3/5.3.1-iot-policy.png)
-*(Minh chứng: Ảnh chụp màn hình cấu hình mã JSON Policy trên AWS Console)*
+*Minh chứng 5.3.1.3: Cấu hình chi tiết mã nguồn JSON của Policy esp-slot-01-policy*
 
 ---
 
-### Bước 4: Lấy thông tin MQTT Endpoint
-Mỗi tài khoản AWS sẽ có một MQTT Endpoint riêng biệt để thiết bị kết nối vào:
-1. Từ thanh menu bên trái của **AWS IoT Core**, kéo xuống dưới cùng chọn **Settings**.
-2. Tại phần **Device data endpoint**, bạn sẽ thấy một chuỗi ký tự dài có cấu trúc dạng:
-   `xxxxxxxxxxxxxx-ats.iot.ap-southeast-1.amazonaws.com`
-3. Sao chép địa chỉ Endpoint này và lưu lại để cấu hình vào mã nguồn ESP32 sau này.
+### 4. Điểm cuối kết nối thiết bị (MQTT Endpoint)
+Địa chỉ **Device data endpoint** của tài khoản được xác định tại mục cấu hình hệ thống trên AWS IoT Core. Đây là địa chỉ IP/Domain định danh duy nhất mà chip ESP32 sẽ gọi tới thông qua thư viện kết nối MQTT:
+- **Địa chỉ Endpoint**: `a9vg0jjmuaycb-ats.iot.ap-southeast-1.amazonaws.com`
+- Địa chỉ này sử dụng chứng chỉ mã hóa chuẩn **ATS (Amazon Trust Services)** để đảm bảo độ tin cậy kết nối và khả năng tương thích cao nhất với các thư viện kết nối trên chip ESP32.
 
 ![MQTT Endpoint](/images/5-Workshop/5.3-IoT-Core-S3/5.3.1-endpoint.png)
-*(Minh chứng: Ảnh chụp màn hình phần Settings hiển thị Device data endpoint)*
+*Minh chứng 5.3.1.4: Địa chỉ Endpoint kết nối MQTT của hệ thống được ghi nhận tại mục Domain Configurations*
+
+---
+
+### 5. Luồng hoạt động kết nối và gửi dữ liệu (IoT Core Flow)
+Để giúp hiểu rõ hơn cách thức vận hành của trạm kiểm soát IoT Core, dưới đây là sơ đồ mô tả tuần tự các bước từ khi thiết bị khởi động đến khi dữ liệu được truyền tải thành công lên đám mây:
+
+{{< mermaid >}}
+sequenceDiagram
+    ESP32->>AWS IoT Core: Gửi kết nối TLS qua cổng 8883 (Client ID: esp-slot-01)
+    AWS IoT Core->>AWS IoT Core: Xác thực bằng chứng chỉ X.509 & Policy
+    AWS IoT Core-->>ESP32: Chấp nhận kết nối thành công (MQTT Connack)
+    ESP32->>AWS IoT Core: Publish trạng thái đỗ xe (Topic: smart-parking/slots/update)
+    AWS IoT Core->>AWS IoT Core: Định tuyến gói tin sang Lambda / Database
+{{< /mermaid >}}

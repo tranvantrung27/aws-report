@@ -1,12 +1,12 @@
 ---
-title : "Chuẩn bị môi trường"
-date : 2026-04-26
-weight : 2
-chapter : false
-pre : " <b> 5. </b> "
+title: "Chuẩn bị môi trường"
+date: 2026-04-26
+weight: 2
+chapter: false
+pre: " <b> 4.2. </b> "
 ---
 
-### 5.2. Chuẩn bị môi trường
+### 4.2. Chuẩn bị môi trường
 
 Để triển khai hệ thống Parking IoT thông minh trên môi trường AWS thực tế, quá trình chuẩn bị tài nguyên phần cứng, phần mềm hỗ trợ và thiết lập quyền truy cập được thực hiện như sau.
 

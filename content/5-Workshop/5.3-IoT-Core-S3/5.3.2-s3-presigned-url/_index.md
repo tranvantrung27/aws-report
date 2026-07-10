@@ -3,7 +3,7 @@ title: "Create S3 Bucket & Presigned URL"
 date: 2026-04-26
 weight: 2
 chapter: false
-pre: " <b> 5.3.2. </b> "
+pre: " <b> 4.3.2. </b> "
 ---
 
 In this section, we will set up the **Amazon S3 Bucket** to store the license plate images captured by the ESP32 Camera, configure **CORS** to support direct uploads, and understand the **S3 Presigned URL** security mechanism.

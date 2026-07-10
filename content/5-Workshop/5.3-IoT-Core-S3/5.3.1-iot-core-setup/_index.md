@@ -3,7 +3,7 @@ title: "AWS IoT Core Configuration"
 date: 2026-04-26
 weight: 1
 chapter: false
-pre: " <b> 5.3.1. </b> "
+pre: " <b> 4.3.1. </b> "
 ---
 
 In this section, we will configure **AWS IoT Core** to register our hardware device (ESP32 Camera) and establish the security certificates that allow the device to securely communicate with the AWS cloud via the MQTT protocol.
