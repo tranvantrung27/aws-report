@@ -8,6 +8,10 @@ pre: " <b> 4.7. </b> "
 
 Nhằm hỗ trợ công tác giám sát, thống kê và vận hành bãi đỗ xe trực quan, một ứng dụng Web Dashboard quản trị toàn diện được xây dựng bằng công nghệ **React/Next.js** kết hợp với thư viện thiết kế hiện đại, triển khai phân phối qua **Amazon CloudFront** (`https://d3imp0j8sdburp.cloudfront.net/`). 
 
+{{% notice info "Link Demo Frontend (FE)" %}}
+🎬 **Xem Demo FE:** Bấm vào [Google Drive Demo FE](https://drive.google.com/drive/folders/1bkY5a88R-GRt-Bm0hTVDSIM8-R6Kj5Rt?usp=sharing) để xem video và hình ảnh demo giao diện Web Dashboard.
+{{% /notice %}}
+
 Hệ thống phân tách thành hai cổng thông tin (Portals) hoạt động song song dựa trên phân quyền người dùng từ Amazon Cognito: **Admin Portal (Cổng quản trị viên)** và **User Portal (Cổng dành cho khách hàng)**.
 
 ---

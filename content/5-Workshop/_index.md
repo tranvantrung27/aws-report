@@ -14,6 +14,10 @@ The **Smart Parking IoT System** is a comprehensive parking management automatio
 
 In this Workshop section, we will walk through all the implementation steps in detail from start to finish — including AWS infrastructure configuration, hardware flashing, user interface building, and monitoring setup.
 
+{{% notice info "Frontend (FE) Demo Link" %}}
+🎬 **Frontend (FE) Demo:** Access the [Google Drive FE Demo Folder](https://drive.google.com/drive/folders/1bkY5a88R-GRt-Bm0hTVDSIM8-R6Kj5Rt?usp=sharing) to view Web Dashboard video demos and screenshots.
+{{% /notice %}}
+
 #### Table of Contents
 
 1. [Workshop Overview](5.1-workshop-overview/)

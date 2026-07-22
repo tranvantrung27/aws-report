@@ -8,6 +8,10 @@ pre: " <b> 4.7. </b> "
 
 To support visual monitoring, statistics, and parking lot operations, a comprehensive administration Web Dashboard was built using **React/Next.js** technology combined with modern design libraries, distributed via **Amazon CloudFront** (`https://d3imp0j8sdburp.cloudfront.net/`).
 
+{{% notice info "Frontend (FE) Demo Link" %}}
+🎬 **FE Demo:** Click [Google Drive FE Demo](https://drive.google.com/drive/folders/1bkY5a88R-GRt-Bm0hTVDSIM8-R6Kj5Rt?usp=sharing) to view video demos and screenshots of the Web Dashboard interface.
+{{% /notice %}}
+
 The system is divided into two Portals operating in parallel based on user authorization from Amazon Cognito: **Admin Portal** and **User Portal**.
 
 ---

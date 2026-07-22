@@ -14,6 +14,10 @@ pre: " <b> 4. </b> "
 
 Nội dung phần này trình bày chi tiết quá trình thiết kế, cấu hình và triển khai thực tế của toàn bộ hệ thống từ đầu đến cuối — bao gồm thiết lập hạ tầng dịch vụ AWS, lập trình nạp code cho thiết bị phần cứng, xây dựng giao diện người dùng và cấu hình giám sát vận hành.
 
+{{% notice info "Link Demo Frontend (FE)" %}}
+🎬 **Demo Frontend (FE):** Truy cập [Thư mục Demo FE trên Google Drive](https://drive.google.com/drive/folders/1bkY5a88R-GRt-Bm0hTVDSIM8-R6Kj5Rt?usp=sharing) để xem video và hình ảnh demo giao diện Web Dashboard.
+{{% /notice %}}
+
 #### Nội dung
 
 1. [Tổng quan về workshop](5.1-workshop-overview/)
